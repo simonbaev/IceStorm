@@ -1,0 +1,33 @@
+{
+	"name": "Ice Storm",
+	"version": "1.0",
+	"description": "Customizes look and feel of GSW RAIN pages",
+	"background": {
+		"scripts": ["assets/js/background.js"],
+		"persistent": false
+	},
+	"page_action": {
+		"default_icon": { // optional
+			"19": "assets/icons/umbrella/icon19.png",
+			"38": "assets/icons/umbrella/icon38.png"
+		},
+		"default_title": "Turn your RAIN into Ice Storm",
+		"default_popup": "popup.html"
+	},
+	"options_ui": {
+		"page": "options.html"
+	},
+	"permissions" : [
+		"storage",
+		//"declarativeContent",
+		"alarms",
+		"tabs",
+		"https://gsw.gabest.usg.edu/pls/B420/*"
+	],
+	"icons" : {
+		"16" : "assets/icons/umbrella/icon16.png",
+		"48" : "assets/icons/umbrella/icon48.png",
+		"128": "assets/icons/umbrella/icon128.png"
+	},
+	"manifest_version": 2
+}

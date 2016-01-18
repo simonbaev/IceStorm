@@ -1,0 +1,11 @@
+{
+	"name": "ice_storm",
+	"version": "1.0.0",
+	"description": "Customizes look and feel of GSW RAIN pages",
+	"dependencies": {
+		"bootstrap": "^3.3.6",
+		"jquery": "1.x"
+	},
+	"devDependencies": {},
+	"author": "Simon Baev"
+}
