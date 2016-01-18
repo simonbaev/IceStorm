@@ -3,7 +3,7 @@
 	"version": "1.0",
 	"description": "Customizes look and feel of GSW RAIN pages",
 	"background": {
-		"scripts": ["assets/js/background.js"],
+		"scripts": ["node_modules/jquery/dist/jquery.min.js", "assets/js/background.js"],
 		"persistent": false
 	},
 	"page_action": {
@@ -19,7 +19,6 @@
 	},
 	"permissions" : [
 		"storage",
-		//"declarativeContent",
 		"alarms",
 		"tabs",
 		"https://gsw.gabest.usg.edu/pls/B420/*"
