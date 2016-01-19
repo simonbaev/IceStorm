@@ -3,7 +3,10 @@
 	"version": "1.0",
 	"description": "Customizes look and feel of GSW RAIN pages",
 	"background": {
-		"scripts": ["node_modules/jquery/dist/jquery.min.js", "assets/js/background.js"],
+		"scripts": [
+			"node_modules/jquery/dist/jquery.min.js", 
+			"assets/js/background.js"
+		],
 		"persistent": false
 	},
 	"page_action": {
@@ -17,15 +20,33 @@
 	"options_ui": {
 		"page": "options.html"
 	},
-	"permissions" : [
+	"permissions": [
 		"storage",
 		"alarms",
 		"tabs",
 		"https://gsw.gabest.usg.edu/pls/B420/*"
 	],
-	"icons" : {
-		"16" : "assets/icons/umbrella/icon16.png",
-		"48" : "assets/icons/umbrella/icon48.png",
+	"content_scripts": [
+		{
+			"matches": ["https://gsw.gabest.usg.edu/pls/B420/bwlkfcwl.P_FacClaListSum"],
+			"css": ["assets/css/content_scripts/roster.css"],
+			"js": [
+				"node_modules/jquery/dist/jquery.min.js",
+				"assets/js/content_scripts/roster.js"
+			]
+		},
+		{
+			"matches": ["https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd"],
+			"css": ["assets/css/content_scripts/finals.css"],
+			"js": [
+				"node_modules/jquery/dist/jquery.min.js",
+				"assets/js/content_scripts/finals.js"
+			]
+		}
+	],
+	"icons": {
+		"16": "assets/icons/umbrella/icon16.png",
+		"48": "assets/icons/umbrella/icon48.png",
 		"128": "assets/icons/umbrella/icon128.png"
 	},
 	"manifest_version": 2

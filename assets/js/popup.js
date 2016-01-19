@@ -1,3 +1,5 @@
-document.addEventListener('DOMContentLoaded', function(){
-	$('#name').text(chrome.extension.getBackgroundPage().facName);
+document.addEventListener('DOMContentLoaded', function () {
+	chrome.storage.local.get(['facID','facName'],function(items){
+		$('#name').text(items.facName);
+	});
 });
