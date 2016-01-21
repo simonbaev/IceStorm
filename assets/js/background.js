@@ -7,8 +7,9 @@ function tabsUpdated(tabId, changeInfo, tab) {
 			if(!/(P_Logout|P_WWWLogin)$/.test(a.pathname)) {		
 				chrome.pageAction.show(tabId);
 			}
-			//-- Retrieve user data after login
-			if(/P_GenMenu/.test(a.pathname)) {		
+			//-- Something to do right after login
+			if(/P_GenMenu/.test(a.pathname)) {
+				//-- Identify Name and ID of the logged used
 				$.get('https://gsw.gabest.usg.edu/pls/B420/bwlkostm.P_FacSelTerm', function(data){
 					var page = $($.parseHTML(data));				
 					var headers = page.find('div.staticheaders').html().split(/<br>/g);
@@ -21,6 +22,17 @@ function tabsUpdated(tabId, changeInfo, tab) {
 	}
 }
 
+function pageActionClicked(tab) {
+	chrome.tabs.create({
+		url: 'ui.html'
+	}, 
+	function(tab){
+
+	});	
+}
+
 chrome.tabs.onUpdated.addListener(tabsUpdated);
+
+chrome.pageAction.onClicked.addListener(pageActionClicked);
 
 
