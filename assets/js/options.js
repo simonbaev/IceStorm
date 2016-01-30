@@ -1,25 +1,20 @@
 function restore_options() {
-	chrome.storage.local.get(
-		{
-			workaround_print: true,
-		},
-		function(items) {
-			document.getElementById('cbPrint').checked = items.workaround_print;
-		}
-	);
+	chrome.storage.local.get(['optPrintWork','optKeepAlive'], function(items) {
+		document.getElementById('cbPrint').checked = items.optPrintWork;
+		document.getElementById('cbKeepAlive').checked = items.optKeepAlive;		
+	});
 }
 
 function save_options() {
-	var workaround_print = document.getElementById('cbPrint').checked;
-	chrome.storage.local.set(
-		{
-			workaround_print: workaround_print
-		}, 
-		function() {		
-		}
-	);
+	var optPrintWork = document.getElementById('cbPrint').checked;
+	var optKeepAlive = document.getElementById('cbKeepAlive').checked;
+	chrome.storage.local.set({
+		optPrintWork: optPrintWork,
+		optKeepAlive: optKeepAlive
+	});
 }
 
 document.addEventListener('DOMContentLoaded', restore_options);
 
 $('#cbPrint').on('change',save_options);
+$('#cbKeepAlive').on('change',save_options);

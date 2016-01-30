@@ -52,8 +52,7 @@ function pageHandler(pageIdx) {
 		}
 	});
 }
-if($('div.printBody').length === 0)	{
-
+function printWorkaround() {
 	//-- Create printBody
 	var printBody =
 		$('<div>')
@@ -122,3 +121,9 @@ if($('div.printBody').length === 0)	{
 		})
 	);
 }
+
+chrome.storage.local.get('optPrintWork', function(items) {
+	if($('div.printBody').length === 0 && items.optPrintWork) {
+		printWorkaround();
+	}
+});

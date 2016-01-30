@@ -3,18 +3,58 @@
 
 <head>
 	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Ice Storm Options</title>
-	<link rel="stylesheet" href="assets/css/bootstrap.min.css">
-	<link rel="stylesheet" type="text/css" href="assets/css/ui.css">
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0'>
+	<title>Umbrella UI</title>
+	<link rel="stylesheet" href="assets/css/bootstrap.css">
+	<link rel="stylesheet" href="assets/css/ui.css">
 </head>
 
 <body>
 	<div class="container-fluid">
-		
+		<div class="row">
+			<div class="col-xs-12">
+				<div class='pull-right form-inline'>
+					<h2 id="facName">Name</h2>
+					<div class="form-group">
+						<label><h4>Term: </h4></label>
+						<select class="form-control" id="termSelect">
+							<option value="02">Spring</option>
+							<option value="05">Summer</option>
+							<option value="08">Fall</option>
+						</select>
+						<input class="form-control" type="number" value="2016" id="termYear">
+					</div>	
+				</div>
+			</div>
+		</div>
+		<ul class="nav nav-tabs" role="tablist">
+			<li class="active" role="presentation">
+				<a href="#tabTeaching" role="tab" data-toggle="tab" area-controls="tabTeaching">Teaching </a>
+			</li>
+			<li role="presentation">
+				<a href="#tabAdvisement" role="tab" data-toggle="tab" area-controls="tabAdvisement">Advisement </a>
+			</li>
+			<li role="presentation">
+				<a href="#tabMisc" role="tab" data-toggle="tab" area-controls="tabMisc">Misc </a>
+			</li>
+		</ul>
+		<div class="tab-content">
+			<div id="tabTeaching" class="tab-pane active" role="tabpanel">
+				<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+					<div class="panel panel-default">						
+					</div>					
+				</div>
+			</div>
+			<div id="tabAdvisement" class="tab-pane" role="tabpanel">
+				<h2>Advisement...</h2>
+			</div>
+			<div id="tabMisc" class="tab-pane" role="tabpanel">
+				<h2>Miscellaneous...</h2>
+			</div>
+		</div>
 	</div>
-	<script src="assets/js/jquery.min.js"></script>
-	<script src="assets/js/bootstrap.min.js"></script>
+	<script src="assets/js/jquery.js"></script>
+	<script src="assets/js/bootstrap.js"></script>
 	<script src="assets/js/ui.js"></script>
 </body>
 

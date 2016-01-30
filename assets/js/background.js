@@ -1,3 +1,5 @@
+var justAuthenticated = true;
+
 function tabsUpdated(tabId, changeInfo, tab) {
 	if(changeInfo.status === "complete") {
 		var a = document.createElement('a');
@@ -8,6 +10,10 @@ function tabsUpdated(tabId, changeInfo, tab) {
 				chrome.pageAction.show(tabId);
 			}
 			//-- Something to do right after login
+			if(/WELCOME/.test(a.search)) {
+				chrome.tabs.update(tabId,{url: a.protocol + a.hostname + a.pathname + '?name=bmenu.P_FacMainMnu'});
+				chrome.alarms.create('watchdog', {periodInMinutes: 5});
+			}
 			if(/P_GenMenu/.test(a.pathname)) {
 				//-- Identify Name and ID of the logged used
 				$.get('https://gsw.gabest.usg.edu/pls/B420/bwlkostm.P_FacSelTerm', function(data){
@@ -16,7 +22,7 @@ function tabsUpdated(tabId, changeInfo, tab) {
 					facID = headers[0].trim().split(/\s+/g,1)[0];
 					facName = headers[0].trim().split(/\s+/g).slice(1).join(' ');
 					chrome.storage.local.set({facID: facID, facName: facName});
-				});
+				});	
 			}
 		}
 	}
@@ -24,15 +30,48 @@ function tabsUpdated(tabId, changeInfo, tab) {
 
 function pageActionClicked(tab) {
 	chrome.tabs.create({
-		url: 'ui.html'
+		url: 'ui.html',
+		index: tab.index + 1
 	}, 
 	function(tab){
 
 	});	
 }
 
+function extensionInstalled(details) {
+	if(details.reason === "install") {
+		chrome.storage.local.clear(function(){
+			//-- Identify and store current Term
+			var cDate = new Date();
+			var cMonth = cDate.getMonth();
+			var termSelect = (cMonth < 4) ? "02" : ((cMonth < 7) ? "05" : "08");
+			var termYear = "" + cDate.getFullYear();
+			var termString =  termYear + termSelect;
+			chrome.storage.local.set({
+				termSelect: termSelect,
+				termYear: termYear,
+				termString: termString,
+				optPrintWork: true,
+				optKeepAlive: true
+			});	
+		});
+	}
+}
+
+function alarmBeeps(alarm) {
+	if(alarm.name === "watchdog") {
+		chrome.storage.local.get('optKeepAlive',function(items){
+			if(items.optKeepAlive){
+				$.get('https://gsw.gabest.usg.edu/pls/B420/bwgkogad.P_SelectEmalView');
+			}
+		});
+	}
+}
+
 chrome.tabs.onUpdated.addListener(tabsUpdated);
 
 chrome.pageAction.onClicked.addListener(pageActionClicked);
 
+chrome.runtime.onInstalled.addListener(extensionInstalled);
 
+chrome.alarms.onAlarm.addListener(alarmBeeps);
