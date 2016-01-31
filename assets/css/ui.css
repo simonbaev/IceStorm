@@ -6,6 +6,19 @@
   margin-left:10px;
 
 }
+th.td_# {
+	width: 10%;
+}
+th.td_name {
+	width: 30%;
+}
+th.td_id {
+	width: 30%;
+}
+th.td_email {
+	width: 30%;
+}
+
 
 
 

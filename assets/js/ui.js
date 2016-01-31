@@ -27,7 +27,8 @@ function updateTerm(termString) {
 				success: function(data) {
 					var html = $($.parseHTML(data));
 					var panel = $('#accordion').empty();
-					html.find('select[name=crn] option').each(function(index){
+					var options = html.find('select[name=crn] option');
+					options.each(function(index){
 						var opt = $(this);
 						var desc = opt.text().split(/,/)[0];
 						var courseNumbers = desc.split(/:/)[0].trim().split(/\s+/g);
@@ -78,47 +79,68 @@ function updateTerm(termString) {
 											$('<thead>')
 											.append(
 												$('<tr>')
-												.append($('<th>').text('#'))
-												.append($('<th>').text('Name'))
-												.append($('<th>').text('GSW ID'))
-												.append($('<th>').text('E-Mail'))
+												.append($('<th>').text('#').addClass('td_#'))
+												.append($('<th>').text('Name').addClass('td_name'))
+												.append($('<th>').text('GSW ID').addClass('td_id'))
+												.append($('<th>').text('E-Mail').addClass('td_email'))
 											)
 										)	
-										.append(
-											$('<tbody>')
-											.append(
-												$('<tr>')
-												.append($('<td>').text('1'))
-												.append($('<td>').text('John Doe'))
-												.append($('<td>').text('913123456'))
-												.append(
-													$('<td>')
-													.append(
-														$('<a>')
-														.attr('href', 'mailto:' + 'jdoe23@radar.gsw.edu')
-														.text('jdoe23@radar.gsw.edu')
-													)
-												)
-											)
-											.append(
-												$('<tr>')
-												.append($('<td>').text('2'))
-												.append($('<td>').text('Peter Pan'))
-												.append($('<td>').text('913000000'))
-												.append(
-													$('<td>')
-													.append(
-														$('<a>')
-														.attr('href', 'mailto:' + 'ppan3@radar.gsw.edu')
-														.text('ppan3@radar.gsw.edu')
-													)
-												)
-											)
-										)
+										.append($('<tbody>'))
 									)
 								)
-							)	
+							)
 						);
+						$.ajax({
+							type: 'POST',
+							async: false,
+							url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkocrn.P_FacStoreCRN',
+							contentType: 'application/x-www-form-urlencoded',
+							data: 'name1=bmenu.P_FacMainMnu&calling_proc_name=P_FACCRNSEL&crn=' + crn,							
+							error: function(e) {
+								console.log(e);
+							},
+							success: function() {
+								$.ajax({
+									type: 'GET',
+									async: false,
+									url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfcwl.P_FacClaListSum',
+									error: function(e) {
+										console.log(e);
+									},
+									success: function(data) {
+										var html = $($.parseHTML(data));
+											html.find('table.datadisplaytable:eq(2) tr:gt(0)').each(function() {
+											var tr = $(this);
+											var email = tr.find('td span.fieldmediumtext a').last().attr('href').split(/[:]/)[1];
+											var name = tr.find('td:eq(1)').text();
+											var lname = name.split(/,/)[0].trim();
+											var fname = name.split(/,/)[1].trim().split(/\s/,1)[0].trim();
+											$('#tc_' + (index+1) + ' table.table tbody')
+											.append(
+												$('<tr>')
+												.append($('<td>').text(tr.find('td:eq(0)').text()))
+												.append($('<td>').text(name))
+												.append($('<td>').text(tr.find('td:eq(2)').text()))
+												.append(
+													$('<td>')
+													.append(
+														$('<a>')
+														.attr(
+															'href', 
+															'mailto:' + fname + '%20' + lname + '%20' +
+															'%3c' + email + '%3e' + '?subject=' + courseNumbers.slice(0,2).join('%20') + ':%20'
+														)
+														.text(email)
+													)
+												)
+											);
+										});
+									}
+								});
+							}
+						});
+						// progress = ((index+1) * 100 / (options.length)) + '%';
+ 					// 	$('#pb').css('width', progress).find('span').text(progress);
 					});
 				}
 			});
