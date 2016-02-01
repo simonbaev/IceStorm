@@ -14,16 +14,6 @@ function tabsUpdated(tabId, changeInfo, tab) {
 				chrome.tabs.update(tabId,{url: a.protocol + a.hostname + a.pathname + '?name=bmenu.P_FacMainMnu'});
 				chrome.alarms.create('watchdog', {periodInMinutes: 5});
 			}
-			if(/P_GenMenu/.test(a.pathname)) {
-				//-- Identify Name and ID of the logged used
-				$.get('https://gsw.gabest.usg.edu/pls/B420/bwlkostm.P_FacSelTerm', function(data){
-					var page = $($.parseHTML(data));				
-					var headers = page.find('div.staticheaders').html().split(/<br>/g);
-					facID = headers[0].trim().split(/\s+/g,1)[0];
-					facName = headers[0].trim().split(/\s+/g).slice(1).join(' ');
-					chrome.storage.local.set({facID: facID, facName: facName});
-				});	
-			}
 		}
 	}
 }
