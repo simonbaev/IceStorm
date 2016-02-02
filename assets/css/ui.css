@@ -6,19 +6,53 @@
   margin-left:10px;
 
 }
-th.td_# {
-	width: 10%;
+table.table th,
+table.table td {
+	vertical-align: middle  !important;
+}
+th.td_N {
+	width: 50px;
 }
 th.td_name {
-	width: 30%;
+	width: 20%;
 }
 th.td_id {
-	width: 30%;
+	width: 20%;
+}
+th.td_att {
+	width: 50px;
+}
+th.td_mid {
+	width: 100px;
+}
+th.td_fin {
+	width: 100px;
 }
 th.td_email {
-	width: 30%;
 }
-
+table.table select {
+	padding: 0px 6px;
+	height: 25px;
+}
+table.table tbody td label {
+	margin: 0px;
+}
+table.table tbody td div {
+	width: 100%;
+	height: 100%;
+	padding: 0px;
+	margin: 0px;
+}
+table.table tbody td div input{
+	margin: 5px;
+}
+table.table thead th.td_att {
+	padding-top: 0px;
+	padding-bottom: 0px;
+}
+table.table thead th.td_att input {
+	margin-top: 2px;
+}
 
 
 
