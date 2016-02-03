@@ -1,7 +1,12 @@
-#inputYear {
-  width: 150px;
+div.page-header {
+	margin-top: 0px;
 }
-
+div.page-header div.pull-right.form-inline {
+	margin: 15px 0px;
+}
+#termYear {
+  width: 100px;
+}
 #selectTerm {
   margin-left:10px;
 
@@ -43,8 +48,12 @@ table.table tbody td div {
 	padding: 0px;
 	margin: 0px;
 }
-table.table tbody td div input{
-	margin: 5px;
+table.table tbody td div {
+	padding: 0px 15px;
+}
+table.table tbody td div input {
+	margin: 0px;
+	margin-top: 5px;
 }
 table.table thead th.td_att {
 	padding-top: 0px;

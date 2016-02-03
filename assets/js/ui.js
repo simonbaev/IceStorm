@@ -12,7 +12,7 @@ function termChangeHandler(ev) {
 
 function addClassesByCRN(container, CRNs, i) {
 	//-- Termination condition
-	if(i < -CRNs.length) {
+	if(i <= 0) {
 		return;
 	}
 	var index = CRNs.length - i;
@@ -240,6 +240,32 @@ function updateTerm(termString) {
 	});
 }
 
+function termPrevNext(ev) {
+	var term = document.getElementById('termSelect');
+	var year = document.getElementById('termYear');
+	var i = term.selectedIndex;
+	switch(ev.currentTarget.id) {
+		case 'nextTerm': 
+			if(++i >= term.options.length) {
+				year.value++;
+			}
+			break;
+		case 'prevTerm': 
+			if(--i < 0) {
+				year.value--;
+			}
+			break;
+	}
+	term.options[(i + term.options.length) % term.options.length].selected = true;
+	var termString =  '' + year.value + term.value;
+	updateTerm(termString);
+	chrome.storage.local.set({
+		termString: termString,
+		termSelect: term.value,
+		termYear: year.value 
+	});
+}
+
 $(document).ready(function(){
 	//-- Identify Name and ID of the logged used
 	$.get('https://gsw.gabest.usg.edu/pls/B420/bwlkostm.P_FacSelTerm', function(data){
@@ -247,7 +273,7 @@ $(document).ready(function(){
 		var headers = page.find('div.staticheaders').html().split(/<br>/g);
 		var facID = headers[0].trim().split(/\s+/g,1)[0];
 		var facName = headers[0].trim().split(/\s+/g).slice(1).join(' ');
-		$('#facName').text(facName);
+		$('#facName').text('Welcome, ' + facName);
 	});	
 	//-- Set term from local storage
 	chrome.storage.local.get(['termSelect','termYear','termString'],function(items){
@@ -258,6 +284,7 @@ $(document).ready(function(){
 
 	$('#termSelect').change(termChangeHandler);
 	$('#termYear').change(termChangeHandler);
-
+	$('#prevTerm').click(termPrevNext);
+	$('#nextTerm').click(termPrevNext);
 });
 

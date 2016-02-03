@@ -12,19 +12,25 @@
 
 <body>
 	<div class="container-fluid">
-		<div class="row">
-			<div class="col-xs-12">
-				<div class='pull-right form-inline'>
+		<div class='page-header'>
+			<div class="row">
+				<div class="col-xs-6">
 					<h3 id="facName">Name</h3>
-					<div class="form-group">
-						<label><h4>Term: </h4></label>
-						<select class="form-control" id="termSelect">
-							<option value="02">Spring</option>
-							<option value="05">Summer</option>
-							<option value="08">Fall</option>
-						</select>
-						<input class="form-control" type="number" value="2016" id="termYear">
-					</div>	
+				</div>
+				<div class="col-xs-6">
+					<div class='pull-right form-inline'>
+						<div class="form-group">
+							<a href='#' id='prevTerm' class="btn btn-link"><span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span></a>
+							<select class="form-control" id="termSelect">
+								<option value="02">Spring</option>
+								<option value="05">Summer</option>
+								<option value="08">Fall</option>
+							</select>
+							<input class="form-control" type="number" value="2016" id="termYear">
+							<a href='#' id='nextTerm' class="btn btn-link"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span></a>
+						</div>	
+					</div>
+					
 				</div>
 			</div>
 		</div>
