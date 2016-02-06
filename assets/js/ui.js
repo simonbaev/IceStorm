@@ -45,7 +45,7 @@ function addClassesByCRN(container, CRNs, i) {
 						'aria-expanded': false,
 						'aria-control': 'tc_' + (index+1)
 					})
-					.html('<strong>' + courseNumbers.slice(0,2).join(' ') + '<small>&nbsp;(' + courseNumbers[2] + ')</small></strong>:&nbsp' + courseTitle)
+					.html('<span><strong>' + courseNumbers.slice(0,2).join(' ') + '<small>&nbsp;(' + courseNumbers[2] + ')</small></strong>:&nbsp' + courseTitle + '</span><small><span class="pull-right"></span></small>')
 				)
 			)
 			.click(function() {
@@ -119,6 +119,7 @@ function addClassesByCRN(container, CRNs, i) {
 function getClassList(container, next){
 	var crnValue = container.data('crn');
 	var courseName = container.data('course');
+	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('getting class list...');
 	$.ajax({
 		type: 'POST',
 		async: true,
@@ -139,159 +140,119 @@ function getClassList(container, next){
 				success: function(data) {
 					var html = $($.parseHTML(data));
 					var rows = html.find('table.datadisplaytable:eq(2) tr:gt(0)');
-					rows.each(function() {
-						var tr = $(this);
-						var email = tr.find('td span.fieldmediumtext a').last().attr('href').split(/[:]/)[1];
-						var name = tr.find('td:eq(1)').text();
-						var id = tr.find('td:eq(2)').text();
-						var lname = name.split(/,/)[0].trim();
-						var fname = name.split(/,/)[1].trim().split(/\s/,1)[0].trim();
-						var wd = /WD/.test(tr.find('td:eq(3)').text());
-						container.find('table.table tbody')
+					if(!rows.length) {
+						container
+						.find('table.table tbody')
 						.append(
 							$('<tr>')
-							.addClass(wd ? 'bg-danger' : '')
-							.attr({
-								'title': wd ? tr.find('td:eq(3)').text().trim() : '',
-								'data-id': id
-							})
-							.append($('<td>').text(tr.find('td:eq(0)').text()).addClass('td_N'))
-							.append($('<td>').text(name).addClass('td_name'))
-							.append($('<td>').text(id).addClass('td_id'))
 							.append(
 								$('<td>')
-								.addClass('td_att')
-								.append(
-									$('<div>')
-									.append(
-										$('<input>')
-										.attr({
-											'type':'checkbox'
-										})
-										.click(function(){
-											this.checked = !this.checked;
-										})
-									)
-									.click(function(){
-										$(this).find('input[type="checkbox"]').each(function(){ 
-											if(!this.disabled) {
-												this.checked = !this.checked; 
-											}
-										});
-									})
-								)							
-							)						
-							.append(
-								$('<td>')
-								.addClass('td_mid')
-								.append(
-									$('<select>')
-									.addClass('form-control')
-									.append($('<option>').val(null).text('None').attr('selected',''))									
-									.append($('<option>').val('A').text('A'))									
-									.append($('<option>').val('B').text('B'))									
-									.append($('<option>').val('C').text('C'))									
-									.append($('<option>').val('D').text('D'))									
-									.append($('<option>').val('F').text('F'))									
-									.append($('<option>').val('I').text('I'))									
-									.append($('<option>').val('P').text('P'))									
-									.append($('<option>').val('S').text('S'))									
-									.append($('<option>').val('U').text('U'))
-									.append($('<option>').val('W').text('W'))
-								)
-							)
-							.append(
-								$('<td>')
-								.addClass('td_fin')
-								.append(
-									$('<select>')
-									.addClass('form-control')
-									.append($('<option>').val(null).text('None').attr('selected',''))
-									.append($('<option>').val('A').text('A'))									
-									.append($('<option>').val('B').text('B'))									
-									.append($('<option>').val('C').text('C'))									
-									.append($('<option>').val('D').text('D'))									
-									.append($('<option>').val('F').text('F'))									
-									.append($('<option>').val('I').text('I'))									
-									.append($('<option>').val('P').text('P'))									
-									.append($('<option>').val('S').text('S'))									
-									.append($('<option>').val('U').text('U'))
-									.append($('<option>').val('W').text('W'))
-								)
-							)
-							.append(
-								$('<td>')
-								.addClass('td_email')
-								.append(
-									$('<a>')
-									.attr(
-										'href', 
-										'mailto:' + fname + '%20' + lname + '%20' +
-										'%3c' + email + '%3e' + '?subject=' + courseName + ':%20'
-									)
-									.text(email)
-								)
+								.attr('colspan',7)
+								.addClass('noData')
+								.text('No records found')
 							)
 						);
-					});
-					//-- Retrieve Final grades from RAIN
-					/*
-					$.ajax({
-						type: 'GET',
-						async: true,
-						url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd',
-						error: function(e) {
-							console.log(e);
-						},
-						success: function(P_FacFinGrd) {
-							var html = $($.parseHTML(P_FacFinGrd));
-							var pageAnchors = html.find('span.fieldlabeltext').nextAll('a');
-							if(html.find('span.errortext').length) {
-								$('#tc_' + (index+1) + ' table.table .td_fin select').attr('disabled','');
-								$('#tc_' + (index+1) + ' table.table .td_fin').addClass('warning').attr('title','Temporally unavailable');
-							}
-							else {
-								getFinalGrades(
-									$('#tc_' + (index+1) + ' table.table'), 
-									html.find('form[name=grades]'),
-									pageAnchors, 
-									pageAnchors.length
-								);
-							}
-							//-- Retrieve Midterm grades and Attendance from RAIN
-							$.ajax({
-								type: 'GET',
-								async: true,
-								url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
-								error: function(e) {
-									console.log(e);
-								},
-								success: function(P_FacMidGrd) {
-									var html = $($.parseHTML(P_FacMidGrd));
-									var pageAnchors = html.find('table.dataentrytable input[name="MENU_NAME"]').nextAll('a');
-									if(html.find('span.errortext').length) {
-										//-- Something wrong on the Midterm grades page, so we disable 'Midterm' and 'Attendence' columns
-										$('#tc_' + (index+1) + ' table.table .td_mid select').attr('disabled','');
-										$('#tc_' + (index+1) + ' table.table .td_att input').attr('disabled','');
-										$('#tc_' + (index+1) + ' table.table .td_mid').addClass('warning').attr('title','Temporally unavailable');
-										$('#tc_' + (index+1) + ' table.table .td_att').addClass('warning').attr('title','Temporally unavailable');
-									}									
-									else {
-										getMidtermGrades(
-											$('#tc_' + (index+1) + ' table.table'), 
-											html.find('form[name=grades]'),
-											pageAnchors, 
-											pageAnchors.length
-										);
-									}
-									addClassesByCRN(container, CRNs, i-1);
-								}
-							});										
+						container.parent().find('.panel-heading .panel-title a span:eq(1)').text('').addClass('glyphicon glyphicon-ok');	
+					}
+					else {
+						rows.each(function() {
+							var tr = $(this);
+							var email = tr.find('td span.fieldmediumtext a').last().attr('href').split(/[:]/)[1];
+							var name = tr.find('td:eq(1)').text();
+							var id = tr.find('td:eq(2)').text();
+							var lname = name.split(/,/)[0].trim();
+							var fname = name.split(/,/)[1].trim().split(/\s/,1)[0].trim();
+							var wd = /WD/.test(tr.find('td:eq(3)').text());
+							container.find('table.table tbody')
+							.append(
+								$('<tr>')
+								.addClass(wd ? 'bg-danger' : '')
+								.attr({
+									'title': wd ? tr.find('td:eq(3)').text().trim() : '',
+									'data-id': id
+								})
+								.append($('<td>').text(tr.find('td:eq(0)').text()).addClass('td_N'))
+								.append($('<td>').text(name).addClass('td_name'))
+								.append($('<td>').text(id).addClass('td_id'))
+								.append(
+									$('<td>')
+									.addClass('td_att')
+									.append(
+										$('<div>')
+										.append(
+											$('<input>')
+											.attr({
+												'type':'checkbox'
+											})
+											.click(function(){
+												this.checked = !this.checked;
+											})
+										)
+										.click(function(){
+											$(this).find('input[type="checkbox"]').each(function(){ 
+												if(!this.disabled) {
+													this.checked = !this.checked; 
+												}
+											});
+										})
+									)							
+								)						
+								.append(
+									$('<td>')
+									.addClass('td_mid')
+									.append(
+										$('<select>')
+										.addClass('form-control')
+										.append($('<option>').val(null).text('None').attr('selected',''))									
+										.append($('<option>').val('A').text('A'))									
+										.append($('<option>').val('B').text('B'))									
+										.append($('<option>').val('C').text('C'))									
+										.append($('<option>').val('D').text('D'))									
+										.append($('<option>').val('F').text('F'))									
+										.append($('<option>').val('I').text('I'))									
+										.append($('<option>').val('P').text('P'))									
+										.append($('<option>').val('S').text('S'))									
+										.append($('<option>').val('U').text('U'))
+										.append($('<option>').val('W').text('W'))
+									)
+								)
+								.append(
+									$('<td>')
+									.addClass('td_fin')
+									.append(
+										$('<select>')
+										.addClass('form-control')
+										.append($('<option>').val(null).text('None').attr('selected',''))
+										.append($('<option>').val('A').text('A'))									
+										.append($('<option>').val('B').text('B'))									
+										.append($('<option>').val('C').text('C'))									
+										.append($('<option>').val('D').text('D'))									
+										.append($('<option>').val('F').text('F'))									
+										.append($('<option>').val('I').text('I'))									
+										.append($('<option>').val('P').text('P'))									
+										.append($('<option>').val('S').text('S'))									
+										.append($('<option>').val('U').text('U'))
+										.append($('<option>').val('W').text('W'))
+									)
+								)
+								.append(
+									$('<td>')
+									.addClass('td_email')
+									.append(
+										$('<a>')
+										.attr(
+											'href', 
+											'mailto:' + fname + '%20' + lname + '%20' +
+											'%3c' + email + '%3e' + '?subject=' + courseName + ':%20'
+										)
+										.text(email)
+									)
+								)
+							);
+						});
+						if(next) {
+							next(container, getMidtermGrades);
 						}
-					});
-					*/
-					if(next) {
-						next(container, getMidtermGrades);
 					}
 				}
 			});
@@ -300,6 +261,7 @@ function getClassList(container, next){
 }
 
 function getFinalGrades(container, next) {
+	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('getting final grades...');
 	$.ajax({
 		type: 'GET',
 		async: true,
@@ -310,8 +272,11 @@ function getFinalGrades(container, next) {
 		success: function(P_FacFinGrd) {
 			var html = $($.parseHTML(P_FacFinGrd));
 			if(html.find('span.errortext').length) {
-				$('#tc_' + (index+1) + ' table.table .td_fin select').attr('disabled','');
-				$('#tc_' + (index+1) + ' table.table .td_fin').addClass('warning').attr('title','Temporally unavailable');
+				container.find('table.table .td_fin select').attr('disabled','');
+				container.find('table.table .td_fin').addClass('warning').attr('title','Temporally unavailable');
+				if(next) {
+					next(container, terminator);
+				}
 			}
 			else {
 				//-- Fill in already existing rows
@@ -332,7 +297,7 @@ function getFinalGrades(container, next) {
 				(function getNextPage(pageAnchors, i) {
 					if(i < 2) {
 						if(next) {
-							next(container, null);
+							next(container, terminator);
 						}		
 						return;
 					}
@@ -368,9 +333,79 @@ function getFinalGrades(container, next) {
 }
 
 function getMidtermGrades(container, next) {
+	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('getting midterm grades and attendance...');
+	$.ajax({
+		type: 'GET',
+		async: true,
+		url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
+		error: function(e) {
+			console.log(e);
+		},
+		success: function(P_FacMidGrd) {
+			var html = $($.parseHTML(P_FacMidGrd));
+			if(html.find('span.errortext').length) {
+				//-- Something wrong on the Midterm grades page, so we disable 'Midterm' and 'Attendence' columns
+				container.find('table.table .td_mid select').attr('disabled','');
+				container.find('table.table .td_att input').attr('disabled','');
+				container.find('table.table .td_mid').addClass('warning').attr('title','Temporally unavailable');
+				container.find('table.table .td_att').addClass('warning').attr('title','Temporally unavailable');
+				if(next) {
+					next(container, null);
+				}
+			}
+			else {
+				//-- Fill in already existing rows
+				html.find('table.dataentrytable tr:gt(0)').each(function(index) {
+					var tr = $(this);
+					var id = tr.find('td:eq(2)').text().trim();
+					var grade = tr.find('td:eq(5) select option:selected').text().trim();
+					container
+					.find('table.table tbody tr[data-id="' + id + '"] td.td_mid select option[value="' + grade + '"]')
+					.prop('selected', true);
+				});
+				//-- Fill in those rows that are on additional pages
+				var pageAnchors = html.find('span.fieldlabeltext').nextAll('a');
+				//-- Call recursive function
+				(function getNextPage(pageAnchors, i) {
+					if(i < 2) {
+						if(next) {
+							next(container, null);
+						}		
+						return;
+					}
+					var numPages = pageAnchors.length;
+					var pageIdx = pageAnchors.eq(numPages - i + 1).attr('href').match(/.*[(](\d+)[)]/)[1];
+					$.ajax({
+						method: 'POST',
+						url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost',
+						contentType: 'application/x-www-form-urlencoded',
+						data: html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageIdx + '&'),
+						error: function(e) {
+							console.log(e);
+						},
+						success: function(pageData) {
+							$($.parseHTML(pageData)).find('table.dataentrytable tr:gt(0)').each(function(index) {
+								var tr = $(this);
+								var id = tr.find('td:eq(2)').text().trim();
+								var grade = tr.find('td:eq(5) select option:selected').text().trim();
+								container
+								.find('table.table tbody tr[data-id="' + id + '"] td.td_mid select option[value="' + grade + '"]')
+								.prop('selected', true);
+							});
+							getNextPage(pageAnchors, i-1);
+						}		
+					});	
+				})(pageAnchors, pageAnchors.length);
+			}			
+		}
+	});
+}
+
+function terminator(container, next) {
+	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('').addClass('glyphicon glyphicon-ok');
 	if(next) {
 		next(container, null);
-	}
+	}	
 }
 
 function updateTerm(termString) {

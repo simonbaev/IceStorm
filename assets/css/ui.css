@@ -62,6 +62,9 @@ table.table thead th.td_att {
 table.table thead th.td_att input {
 	margin-top: 2px;
 }
-
+table.table td.noData {
+	padding: 5px 20px;
+	font-weight: bold;
+}
 
 
