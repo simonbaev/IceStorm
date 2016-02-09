@@ -100,6 +100,25 @@ function addClassesByCRN(container, CRNs, i) {
 					)	
 					.append($('<tbody>'))
 				)
+				.append(
+					$('<a>')
+					.addClass('btn btn-default pull-right')
+					.attr({
+						'role':'button',
+						'href': '#'
+					})
+					.click(function(){
+						var addressList = "";
+						var termString = $('#termSelect option:selected').text() + ' ' + $('#termYear').val();
+						$(this).parent().find('table.table tbody tr').each(function(){
+							addressList += $(this).find('td.td_email a').attr('data-email') + ';';
+						});
+						chrome.tabs.create({
+							url: 'mailto:' + addressList + '?subject=' + courseNumbers.slice(0,2).join(' ') + ':%20'
+						});
+					})
+					.text('E-Mail to class')
+				)
 			)
 			.data('crn',crnValue)
 			.data('course',courseNumbers.slice(0,2).join('%20'))
@@ -107,10 +126,10 @@ function addClassesByCRN(container, CRNs, i) {
 				var container = $(this);
 				var crnValue = container.data('crn');
 				if(!container.find('table.table tbody tr').length) {
-					getClassList(container,	getFinalGrades);
+					getClassList(container,	getMidtermGrades);
 				}
-			})
-		)
+			})			
+		)		
 	);
 	//-- Jump to next class
 	addClassesByCRN(container, CRNs, i-1);	
@@ -119,7 +138,7 @@ function addClassesByCRN(container, CRNs, i) {
 function getClassList(container, next){
 	var crnValue = container.data('crn');
 	var courseName = container.data('course');
-	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('getting class list...');
+	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('class roster...');
 	$.ajax({
 		type: 'POST',
 		async: true,
@@ -240,18 +259,18 @@ function getClassList(container, next){
 									.addClass('td_email')
 									.append(
 										$('<a>')
-										.attr(
-											'href', 
-											'mailto:' + fname + '%20' + lname + '%20' +
-											'%3c' + email + '%3e' + '?subject=' + courseName + ':%20'
-										)
+										.attr({
+											'href': 	'mailto:' + fname + '%20' + lname + '%20' + '%3c' + email + '%3e' + '?subject=' + courseName + ':%20',
+											'data-email': email,
+											'target': '_blank'
+										})
 										.text(email)
 									)
 								)
 							);
 						});
 						if(next) {
-							next(container, getMidtermGrades);
+							next(container, getFinalGrades);
 						}
 					}
 				}
@@ -260,8 +279,89 @@ function getClassList(container, next){
 	});
 }
 
+function getMidtermGrades(container, next) {
+	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('midterm grades and attendance...');
+	$.ajax({
+		type: 'GET',
+		async: true,
+		url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
+		error: function(e) {
+			console.log(e);
+		},
+		success: function(P_FacMidGrd) {
+			var html = $($.parseHTML(P_FacMidGrd));
+			if(html.find('span.errortext').length) {
+				//-- Something wrong on the Midterm grades page, so we disable 'Midterm' and 'Attendence' columns
+				container.find('table.table .td_mid select').attr('disabled','');
+				container.find('table.table .td_att input').attr('disabled','');
+				container.find('table.table .td_mid').addClass('warning').attr('title','Temporally unavailable');
+				container.find('table.table .td_att').addClass('warning').attr('title','Temporally unavailable');
+				if(next) {
+					next(container, terminator);
+				}
+			}
+			else {
+				//-- Fill in already existing rows
+				html.find('table.dataentrytable tr:gt(0):not(:last-child)').each(function(index) {
+					var tr = $(this);
+					var id = tr.find('td:eq(2)').text().trim();
+					var grade = tr.find('td:eq(5) select option:selected').text().trim();
+					var att = tr.find('td:eq(7) input').val();
+					container
+					.find('table.table tbody tr[data-id="' + id + '"]')
+					.find('td.td_mid select option[value="' + grade + '"]')
+					.prop('selected', true)
+					.end()
+					.find('td.td_att input[type="checkbox"]')
+					.prop('checked', (att > 0));
+				});
+				//-- Fill in those rows that are on additional pages
+				var pageAnchors = html.find('table.dataentrytable tr td input[name="MENU_NAME"]').nextAll('a');
+				//-- Call recursive function
+				(function getNextPage(pageAnchors, i) {
+					if(i < 2) {
+						if(next) {
+							next(container, terminator);
+						}		
+						return;
+					}
+					var numPages = pageAnchors.length;
+					var pageIdx = pageAnchors.eq(numPages - i + 1).attr('href').match(/.*[(](\d+)[)]/)[1];
+					$.ajax({
+						method: 'POST',
+						url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost',
+						contentType: 'application/x-www-form-urlencoded',
+						data: html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageIdx + '&'),
+						error: function(e) {
+							console.log(e);
+						},
+						success: function(pageData) {
+							$($.parseHTML(pageData)).find('table.dataentrytable tr:gt(0):not(:last-child)').each(function(index) {
+								var tr = $(this);
+								console.log(tr);
+								var id = tr.find('td:eq(2)').text().trim();
+								var grade = tr.find('td:eq(5) select option:selected').text().trim();
+								var att = tr.find('td:eq(7) input').val();
+								console.log(id + ': ' + grade + ' - ' + att);
+								container
+								.find('table.table tbody tr[data-id="' + id + '"]')
+								.find('td.td_mid select option[value="' + grade + '"]')
+								.prop('selected', true)
+								.end()
+								.find('td.td_att input[type="checkbox"]')
+								.prop('checked', (att > 0));
+							});
+							getNextPage(pageAnchors, i-1);
+						}		
+					});	
+				})(pageAnchors, pageAnchors.length);
+			}			
+		}
+	});
+}
+
 function getFinalGrades(container, next) {
-	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('getting final grades...');
+	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('final grades...');
 	$.ajax({
 		type: 'GET',
 		async: true,
@@ -275,7 +375,7 @@ function getFinalGrades(container, next) {
 				container.find('table.table .td_fin select').attr('disabled','');
 				container.find('table.table .td_fin').addClass('warning').attr('title','Temporally unavailable');
 				if(next) {
-					next(container, terminator);
+					next(container, null);
 				}
 			}
 			else {
@@ -283,8 +383,11 @@ function getFinalGrades(container, next) {
 				html.find('table.dataentrytable tr:gt(0)').each(function(index) {
 					var tr = $(this);
 					var id = tr.find('td:eq(2)').text().trim();
-					var grade = tr.find('td:eq(5)').text().trim();
 					var tooOld = (tr.find('td:eq(5) select').length === 0);
+					var grade = 
+						tooOld ?
+						tr.find('td:eq(5)').text().trim() :
+						tr.find('td:eq(5) select option:selected').text().trim();
 					container
 					.find('table.table tbody tr[data-id="' + id + '"] td.td_fin select option[value="' + grade + '"]')
 					.prop('selected', true)
@@ -297,7 +400,7 @@ function getFinalGrades(container, next) {
 				(function getNextPage(pageAnchors, i) {
 					if(i < 2) {
 						if(next) {
-							next(container, terminator);
+							next(container, null);
 						}		
 						return;
 					}
@@ -315,8 +418,11 @@ function getFinalGrades(container, next) {
 							$($.parseHTML(pageData)).find('table.dataentrytable tr:gt(0)').each(function(index) {
 								var tr = $(this);
 								var id = tr.find('td:eq(2)').text().trim();
-								var grade = tr.find('td:eq(5)').text().trim();
 								var tooOld = (tr.find('td:eq(5) select').length === 0);
+								var grade = 
+									tooOld ?
+									tr.find('td:eq(5)').text().trim() :
+									tr.find('td:eq(5) select option:selected').text().trim();
 								container
 								.find('table.table tbody tr[data-id="' + id + '"] td.td_fin select option[value="' + grade + '"]')
 								.prop('selected', true)
@@ -328,75 +434,6 @@ function getFinalGrades(container, next) {
 					});	
 				})(pageAnchors, pageAnchors.length);
 			}
-		}
-	});
-}
-
-function getMidtermGrades(container, next) {
-	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('getting midterm grades and attendance...');
-	$.ajax({
-		type: 'GET',
-		async: true,
-		url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
-		error: function(e) {
-			console.log(e);
-		},
-		success: function(P_FacMidGrd) {
-			var html = $($.parseHTML(P_FacMidGrd));
-			if(html.find('span.errortext').length) {
-				//-- Something wrong on the Midterm grades page, so we disable 'Midterm' and 'Attendence' columns
-				container.find('table.table .td_mid select').attr('disabled','');
-				container.find('table.table .td_att input').attr('disabled','');
-				container.find('table.table .td_mid').addClass('warning').attr('title','Temporally unavailable');
-				container.find('table.table .td_att').addClass('warning').attr('title','Temporally unavailable');
-				if(next) {
-					next(container, null);
-				}
-			}
-			else {
-				//-- Fill in already existing rows
-				html.find('table.dataentrytable tr:gt(0)').each(function(index) {
-					var tr = $(this);
-					var id = tr.find('td:eq(2)').text().trim();
-					var grade = tr.find('td:eq(5) select option:selected').text().trim();
-					container
-					.find('table.table tbody tr[data-id="' + id + '"] td.td_mid select option[value="' + grade + '"]')
-					.prop('selected', true);
-				});
-				//-- Fill in those rows that are on additional pages
-				var pageAnchors = html.find('span.fieldlabeltext').nextAll('a');
-				//-- Call recursive function
-				(function getNextPage(pageAnchors, i) {
-					if(i < 2) {
-						if(next) {
-							next(container, null);
-						}		
-						return;
-					}
-					var numPages = pageAnchors.length;
-					var pageIdx = pageAnchors.eq(numPages - i + 1).attr('href').match(/.*[(](\d+)[)]/)[1];
-					$.ajax({
-						method: 'POST',
-						url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost',
-						contentType: 'application/x-www-form-urlencoded',
-						data: html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageIdx + '&'),
-						error: function(e) {
-							console.log(e);
-						},
-						success: function(pageData) {
-							$($.parseHTML(pageData)).find('table.dataentrytable tr:gt(0)').each(function(index) {
-								var tr = $(this);
-								var id = tr.find('td:eq(2)').text().trim();
-								var grade = tr.find('td:eq(5) select option:selected').text().trim();
-								container
-								.find('table.table tbody tr[data-id="' + id + '"] td.td_mid select option[value="' + grade + '"]')
-								.prop('selected', true);
-							});
-							getNextPage(pageAnchors, i-1);
-						}		
-					});	
-				})(pageAnchors, pageAnchors.length);
-			}			
 		}
 	});
 }
@@ -483,5 +520,25 @@ $(document).ready(function(){
 	$('#termYear').change(termChangeHandler);
 	$('#prevTerm').click(termPrevNext);
 	$('#nextTerm').click(termPrevNext);
+});
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+	if($(window).data('noMorePrompts') !== true) {
+		bootbox.confirm({
+			animate: false,
+			message: message,
+			callback: function(result) {
+				if (result) {
+					chrome.tabs.getCurrent(function(tab) {
+					    chrome.tabs.remove(tab.id, function() { });
+					});
+				} 
+				else {
+					$(window).data('noMorePrompts',true);
+				}
+			}
+		});
+	}
+
 });
 
