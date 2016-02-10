@@ -32,13 +32,19 @@ function pageActionClicked(tab) {
 					}
 				);
 			}
-			else {	
-				chrome.tabs.create(
-					{
-						url: 'ui.html',
-						index: tab.index + 1
+			else {
+				chrome.tabs.query({url: 'chrome-extension://*/ui.html'},function(tabs){
+					if(!tabs.length) {
+						chrome.tabs.create({
+							url: 'ui.html',
+							index: tab.index + 1
+						});	
+						chrome.storage.local.set({parentSessionTab: tab});
 					}
-				);	
+					else {
+						chrome.tabs.update(tabs[0].id,{active: true});
+					}
+				});
 			}
 		}
 	});
@@ -74,7 +80,17 @@ function alarmBeeps(alarm) {
 					success: function(data){
 						if($($.parseHTML(data)).find('form[name="loginform"]').length) {
 							//-- we can see login form so we have to close UI and inform the user
-							chrome.runtime.sendMessage('Same RAIN account was used to start another session, please re-login');
+							chrome.runtime.sendMessage({
+								type: 'confirmReLogin',
+								text: 'Same RAIN account was used to start another session, please re-login'
+							}, function(keepUI){
+								chrome.storage.local.get('parentSessionTab',function(items){
+									chrome.tabs.update(items.parentSessionTab.id,{
+										url: 'https://gsw.gabest.usg.edu/pls/B420/twbkwbis.P_WWWLogin',
+										active: !keepUI
+									});
+								});
+							});
 						}
 					}
 				});

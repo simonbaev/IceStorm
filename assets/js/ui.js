@@ -338,11 +338,9 @@ function getMidtermGrades(container, next) {
 						success: function(pageData) {
 							$($.parseHTML(pageData)).find('table.dataentrytable tr:gt(0):not(:last-child)').each(function(index) {
 								var tr = $(this);
-								console.log(tr);
 								var id = tr.find('td:eq(2)').text().trim();
 								var grade = tr.find('td:eq(5) select option:selected').text().trim();
 								var att = tr.find('td:eq(7) input').val();
-								console.log(id + ': ' + grade + ' - ' + att);
 								container
 								.find('table.table tbody tr[data-id="' + id + '"]')
 								.find('td.td_mid select option[value="' + grade + '"]')
@@ -523,22 +521,27 @@ $(document).ready(function(){
 });
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-	if($(window).data('noMorePrompts') !== true) {
-		bootbox.confirm({
-			animate: false,
-			message: message,
-			callback: function(result) {
-				if (result) {
-					chrome.tabs.getCurrent(function(tab) {
-					    chrome.tabs.remove(tab.id, function() { });
-					});
-				} 
-				else {
-					$(window).data('noMorePrompts',true);
+	if(message.type === 'confirmReLogin') {
+		if($(window).data('noMorePrompts') !== true) {
+			bootbox.confirm({
+				animate: false,
+				message: message.text,
+				callback: function(result) {
+					if (result) {
+						sendResponse(false);
+						chrome.tabs.getCurrent(function(tab) {
+						   chrome.tabs.remove(tab.id, function() { });
+						});					
+					} 
+					else {
+						$(window).data('noMorePrompts',true);
+						$('#facName').html($('#facName').html() + '&nbsp;<small class="text-danger">(session disconnected)</small>');
+						sendResponse(true);
+					}
 				}
-			}
-		});
+			});
+		}
+		return true;
 	}
-
 });
 
