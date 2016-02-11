@@ -66,5 +66,7 @@ table.table td.noData {
 	padding: 5px 20px;
 	font-weight: bold;
 }
-
+div.panel-body a.btn {
+	margin-left: 20px;
+}
 

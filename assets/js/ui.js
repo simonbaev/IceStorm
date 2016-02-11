@@ -114,14 +114,51 @@ function addClassesByCRN(container, CRNs, i) {
 							addressList += $(this).find('td.td_email a').attr('data-email') + ';';
 						});
 						chrome.tabs.create({
-							url: 'mailto:' + addressList + '?subject=' + courseNumbers.slice(0,2).join(' ') + ':%20'
+							url: 'mailto:?bcc=' + addressList + '&subject=' + courseNumbers.slice(0,2).join(' ') + ':%20'
 						});
 					})
 					.text('E-Mail to class')
 				)
+				.append(
+					$('<a>')
+					.addClass('btn btn-default pull-right')
+					.attr({
+						'role':'button',
+						'href': '#'
+					})
+					.click(function(){
+						var term = $('#termSelect option:selected').text() + ' ' + $('#termYear').val();
+						var crn = $(this).parents('.collapse').data('crn');
+						var course = $(this).parents('.collapse').data('course');
+						var fileName = (course + ' (CRN:' + crn + ') ' + '[' + term + '].csv').replace(/ /g,'_');
+						var th = $(this).siblings('table.table').find('thead tr:eq(0) th');
+						var tr = $(this).siblings('table.table').find('tbody tr');
+						var csvData = '';
+						th.each(function(thIndex){
+							csvData += '"' + $(this).text() + ((thIndex < (th.length-1)) ? '",' : '"\n'); 
+						});	
+						tr.each(function(trIndex){
+							var td = $(this).find('td');
+							csvData += td.eq(0).text() + ',';
+							csvData += '"' + td.eq(1).text().trim() + '",';
+							csvData += td.eq(2).text() + ',';
+							csvData += (td.eq(3).find('input').prop('checked') ? 1 : 0) + ',';
+							csvData += td.eq(4).find('select option:selected').text() + ',';
+							csvData += td.eq(5).find('select option:selected').text() + ',';
+							csvData += td.eq(6).text() + '\n';
+						});
+						//-- modify link properties
+						$(this)
+						.attr({
+							'href': 'data:application/csv;charset=UTF-8,' + encodeURIComponent(csvData),
+							'download': fileName
+						});
+					})
+					.text('Export to CSV')
+				)
 			)
 			.data('crn',crnValue)
-			.data('course',courseNumbers.slice(0,2).join('%20'))
+			.data('course',courseNumbers.slice(0,2).join(' '))
 			.on('show.bs.collapse',function(){
 				var container = $(this);
 				var crnValue = container.data('crn');
