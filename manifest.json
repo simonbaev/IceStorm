@@ -1,6 +1,6 @@
 {
 	"name": "Umbrella",
-	"version": "1.0.13",
+	"version": "1.0.14",
 	"description": "Customizes look and feel of GSW RAIN pages",
 	"background": {
 		"scripts": [
@@ -24,26 +24,6 @@
 		"alarms",
 		"tabs",
 		"https://gsw.gabest.usg.edu/pls/B420/*"
-	],
-	"content_scripts": [
-		{
-			"matches": ["https://gsw.gabest.usg.edu/pls/B420/bwlkfcwl.P_FacClaListSum"],
-			"css": ["assets/css/content_scripts/roster.css"],
-			"js": [
-				"assets/js/jquery.js",
-				"assets/js/content_scripts/roster.js"
-			],
-			"run_at": "document_end"
-		},
-		{
-			"matches": ["https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd"],
-			"css": ["assets/css/content_scripts/finals.css"],
-			"js": [
-				"assets/js/jquery.js",
-				"assets/js/content_scripts/finals.js"
-			],
-			"run_at": "document_end"
-		}
 	],
 	"icons": {
 		"16": "assets/icons/umbrella/icon16.png",
