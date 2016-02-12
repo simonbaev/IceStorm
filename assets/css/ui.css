@@ -69,4 +69,29 @@ table.table td.noData {
 div.panel-body a.btn {
 	margin-left: 20px;
 }
+div.printContainer {
+	display: none;	
+}
+@media print {
+	@page {
+		size: portrait;
+	}
+	div.printContainer {
+		font-size: x-small;
+		display: block !important;
+	}
+	div.printContainer .row {
+		padding-bottom: 20px;
+	}
+	div.printExclusion {
+		display: none !important;
+	}
+	#printTable tbody td.td_name {
+		width: 30%;
+	}
+	#printTable tbody tr td {
+		padding-top: 3px;
+		padding-bottom: 3px;
+	}
+}
 

@@ -156,8 +156,71 @@ function addClassesByCRN(container, CRNs, i) {
 					})
 					.text('Export to CSV')
 				)
+				.append(
+					$('<a>')
+					.addClass('btn btn-default pull-right')
+					.attr({
+						'role':'button',
+						'href': '#'
+					})
+					.click(function(){
+						//-- retrieve some data
+						var term = $('#termSelect option:selected').text() + ' ' + $('#termYear').val();
+						var crn = $(this).parents('.collapse').data('crn');
+						var course = $(this).parents('.collapse').data('course');
+						var title = $(this).parents('.collapse').data('title');
+						var table = $(this).siblings('table.table');
+						//-- fill in print area
+						$('div.printContainer .row .pull-left').text(course + ': ' + title + ' (CRN:' + crn + ')');
+						$('div.printContainer .row .pull-right').text(term);
+						var container = 
+						$('div.printContainer .page-content')
+						.empty()
+						.append(
+							table
+							.clone()
+							.removeClass('table-bordered')
+							.attr('id','printTable')
+							.find('thead tr th:eq(3)').empty().text('Att.')
+							.end()
+							.find('tbody tr').each(function(trIndex){
+								var tr = $(this);
+								tr.find('td').each(function(tdIndex){
+									switch (tdIndex) {
+										case 3: 
+											var att = $(this).find('input').prop('checked');
+											if($(this).find('input').prop('disabled')) {
+												$(this).empty().text('N/A');
+											}
+											else {
+												$(this).empty().append($(att ? '<span>&#10004;</span>' : '<span>&#10008;</span>'));
+											}
+											break;
+										case 4:
+										case 5:
+											var grade = $(this).attr('data-grade');
+											$(this).empty().text(grade);
+											break;
+										case 6:
+											var email = $(this).find('a').attr('data-email');
+											$(this).empty().text(email);
+									}
+								});
+							})
+							.end()
+						);
+						//-- toggle print area
+						$('div.printContainer > div').toggleClass('printExclusion');
+						//-- engage print dialog
+						window.print();
+						//-- toggle print area
+						$('div.printContainer > div').toggleClass('printExclusion');
+					})
+					.text('Print')
+				)
 			)
 			.data('crn',crnValue)
+			.data('title',courseTitle)
 			.data('course',courseNumbers.slice(0,2).join(' '))
 			.on('show.bs.collapse',function(){
 				var container = $(this);
@@ -329,10 +392,28 @@ function getMidtermGrades(container, next) {
 			var html = $($.parseHTML(P_FacMidGrd));
 			if(html.find('span.errortext').length) {
 				//-- Something wrong on the Midterm grades page, so we disable 'Midterm' and 'Attendence' columns
-				container.find('table.table .td_mid select').attr('disabled','');
-				container.find('table.table .td_att input').attr('disabled','');
-				container.find('table.table .td_mid').addClass('warning').attr('title','Temporally unavailable');
-				container.find('table.table .td_att').addClass('warning').attr('title','Temporally unavailable');
+				container
+				.find('table.table')
+				.find('.td_mid')
+					.addClass('warning')
+					.attr({
+						'title': 'Temporally unavailable',
+						'data-grade': 'N/A'
+					})
+					.find('select')
+						.attr('disabled','')
+					.end()
+				.end()
+				.find('.td_att')
+					.addClass('warning')
+					.attr({
+						'title': 'Temporally unavailable',
+					})
+					.find('input')
+						.attr('disabled','')
+					.end()
+				.end();
+				//-- Call next round
 				if(next) {
 					next(container, terminator);
 				}
@@ -346,11 +427,14 @@ function getMidtermGrades(container, next) {
 					var att = tr.find('td:eq(7) input').val();
 					container
 					.find('table.table tbody tr[data-id="' + id + '"]')
-					.find('td.td_mid select option[value="' + grade + '"]')
-					.prop('selected', true)
+					.find('td.td_mid')
+						.attr('data-grade',grade)
+						.find('select option[value="' + grade + '"]')
+							.prop('selected', true)
+						.end()
 					.end()
 					.find('td.td_att input[type="checkbox"]')
-					.prop('checked', (att > 0));
+						.prop('checked', (att > 0));
 				});
 				//-- Fill in those rows that are on additional pages
 				var pageAnchors = html.find('table.dataentrytable tr td input[name="MENU_NAME"]').nextAll('a');
@@ -380,11 +464,14 @@ function getMidtermGrades(container, next) {
 								var att = tr.find('td:eq(7) input').val();
 								container
 								.find('table.table tbody tr[data-id="' + id + '"]')
-								.find('td.td_mid select option[value="' + grade + '"]')
-								.prop('selected', true)
+								.find('td.td_mid')
+									.attr('data-grade',grade)
+									.find('select option[value="' + grade + '"]')
+										.prop('selected', true)
+									.end()
 								.end()
 								.find('td.td_att input[type="checkbox"]')
-								.prop('checked', (att > 0));
+									.prop('checked', (att > 0));
 							});
 							getNextPage(pageAnchors, i-1);
 						}		
@@ -407,8 +494,15 @@ function getFinalGrades(container, next) {
 		success: function(P_FacFinGrd) {
 			var html = $($.parseHTML(P_FacFinGrd));
 			if(html.find('span.errortext').length) {
-				container.find('table.table .td_fin select').attr('disabled','');
-				container.find('table.table .td_fin').addClass('warning').attr('title','Temporally unavailable');
+				container
+				.find('table.table .td_fin')
+				.addClass('warning')
+				.attr({
+					'title': 'Temporally unavailable',
+					'data-grade': 'N/A'
+				})
+				.find('select')
+				.attr('disabled','');
 				if(next) {
 					next(container, null);
 				}
@@ -424,7 +518,9 @@ function getFinalGrades(container, next) {
 						tr.find('td:eq(5)').text().trim() :
 						tr.find('td:eq(5) select option:selected').text().trim();
 					container
-					.find('table.table tbody tr[data-id="' + id + '"] td.td_fin select option[value="' + grade + '"]')
+					.find('table.table tbody tr[data-id="' + id + '"] td.td_fin')
+					.attr('data-grade',grade)
+					.find('select option[value="' + grade + '"]')
 					.prop('selected', true)
 					.parent()
 					.attr(tooOld ? 'disabled' : '','');
@@ -459,7 +555,9 @@ function getFinalGrades(container, next) {
 									tr.find('td:eq(5)').text().trim() :
 									tr.find('td:eq(5) select option:selected').text().trim();
 								container
-								.find('table.table tbody tr[data-id="' + id + '"] td.td_fin select option[value="' + grade + '"]')
+								.find('table.table tbody tr[data-id="' + id + '"] td.td_fin')
+								.attr('data-grade',grade)
+								.find('select option[value="' + grade + '"]')
 								.prop('selected', true)
 								.parent()
 								.attr(tooOld ? 'disabled' : '','');
