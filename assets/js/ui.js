@@ -1,3 +1,36 @@
+/*jshint esnext: true */
+function gradeChangeHandler(ev) {
+	var target = $(ev.target);
+	var td = target.parents('td');
+	var isAtt = (ev.target.nodeName === 'INPUT');
+	var type = isAtt ? 'mid' : target.attr('data-gType');
+	var value = isAtt ? ev.target.checked : target.find('option:selected').text();
+	var crn = target.parents('div.collapse').data('crn');
+	var id = target.parents('tr').find('td.td_id').text();
+	var page = target.parents('tr').data('pageIdx');
+	var map = $(window).data('gMap');
+	if(!(crn in map)) {
+		map[crn] = {};
+	}
+	if(!(type in map[crn])) {
+		map[crn][type] = {};		
+	}
+	if(!(page in map[crn][type])) {
+		map[crn][type][page] = {};
+	}
+	if(type === 'mid') {
+		if(!(id in map[crn][type][page])) {
+			map[crn][type][page][id] = {};
+		}
+		map[crn][type][page][id][isAtt ? 'att' : 'grade'] = value;
+	}
+	else {
+		map[crn][type][page][id] = value;
+	}
+	td.addClass('bg-info');
+	$(window).data('gMap',map);
+}
+
 function termChangeHandler(ev) {
 	var termYear = $('#termYear').val().trim();
 	var termSelect = $('#termSelect').val();
@@ -102,7 +135,38 @@ function addClassesByCRN(container, CRNs, i) {
 				)
 				.append(
 					$('<a>')
-					.addClass('btn btn-default pull-right')
+					.addClass('btn btn-primary pull-right')
+					.attr({
+						'role':'button',
+						'href': '#'
+					})
+					.click(function(){
+						var map = $(window).data('gMap');
+						var crn = $(this).parents('.collapse').data('crn');
+						if(!(crn in map)) {
+							return false;
+						}
+						//-- iterate through map to update records
+						for(var type in map[crn]) {
+							switch (type) {
+								case 'mid':
+									console.log(map[crn].mid);
+									break;
+								case 'fin':
+									break;
+							}
+						}
+						//-- remove submitted changesfrom the map
+						delete map[crn];
+						$(window).data('gMap',map);
+						$(this).siblings('table').find('td.bg-info').removeClass('bg-info');
+					})
+					.text("Submit")
+				)
+				//-- E-Mail to class
+				.append(
+					$('<a>')
+					.addClass('btn btn-success pull-right')
 					.attr({
 						'role':'button',
 						'href': '#'
@@ -119,9 +183,10 @@ function addClassesByCRN(container, CRNs, i) {
 					})
 					.text('E-Mail to class')
 				)
+				//-- Export to CSV
 				.append(
 					$('<a>')
-					.addClass('btn btn-default pull-right')
+					.addClass('btn btn-info pull-right')
 					.attr({
 						'role':'button',
 						'href': '#'
@@ -139,15 +204,16 @@ function addClassesByCRN(container, CRNs, i) {
 						});	
 						tr.each(function(trIndex){
 							var td = $(this).find('td');
+							attStatus = td.find('input').prop('disabled');
+							attValue = td.eq(3).find('input').prop('checked') ? 1 : 0;
 							csvData += td.eq(0).text() + ',';
 							csvData += '"' + td.eq(1).text().trim() + '",';
 							csvData += td.eq(2).text() + ',';
-							csvData += (td.eq(3).find('input').prop('checked') ? 1 : 0) + ',';
-							csvData += td.eq(4).find('select option:selected').text() + ',';
-							csvData += td.eq(5).find('select option:selected').text() + ',';
+							csvData += (attStatus ? 'N/A' : attValue) + ',';
+							csvData += td.eq(4).attr('data-grade') + ',';
+							csvData += td.eq(5).attr('data-grade') + ',';
 							csvData += td.eq(6).text() + '\n';
 						});
-						//-- modify link properties
 						$(this)
 						.attr({
 							'href': 'data:application/csv;charset=UTF-8,' + encodeURIComponent(csvData),
@@ -156,9 +222,10 @@ function addClassesByCRN(container, CRNs, i) {
 					})
 					.text('Export to CSV')
 				)
+				//-- Print
 				.append(
 					$('<a>')
-					.addClass('btn btn-default pull-right')
+					.addClass('btn btn-warning pull-right')
 					.attr({
 						'role':'button',
 						'href': '#'
@@ -306,11 +373,13 @@ function getClassList(container, next){
 											.click(function(){
 												this.checked = !this.checked;
 											})
+											.change(gradeChangeHandler)
 										)
 										.click(function(){
 											$(this).find('input[type="checkbox"]').each(function(){ 
 												if(!this.disabled) {
 													this.checked = !this.checked; 
+													$(this).trigger('change');
 												}
 											});
 										})
@@ -333,6 +402,8 @@ function getClassList(container, next){
 										.append($('<option>').val('S').text('S'))									
 										.append($('<option>').val('U').text('U'))
 										.append($('<option>').val('W').text('W'))
+										.attr('data-gtype','mid')
+										.change(gradeChangeHandler)
 									)
 								)
 								.append(
@@ -352,6 +423,8 @@ function getClassList(container, next){
 										.append($('<option>').val('S').text('S'))									
 										.append($('<option>').val('U').text('U'))
 										.append($('<option>').val('W').text('W'))
+										.attr('data-gtype','fin')
+										.change(gradeChangeHandler)
 									)
 								)
 								.append(
@@ -427,14 +500,17 @@ function getMidtermGrades(container, next) {
 					var att = tr.find('td:eq(7) input').val();
 					container
 					.find('table.table tbody tr[data-id="' + id + '"]')
-					.find('td.td_mid')
-						.attr('data-grade',grade)
-						.find('select option[value="' + grade + '"]')
-							.prop('selected', true)
+						.data('pageIdx',1)
+						.find('td.td_mid')
+							.attr('data-grade',grade)
+							.find('select option[value="' + grade + '"]')
+								.prop('selected', true)
+							.end()
 						.end()
-					.end()
-					.find('td.td_att input[type="checkbox"]')
-						.prop('checked', (att > 0));
+						.find('td.td_att input[type="checkbox"]')
+							.prop('checked', (att > 0))
+						.end()
+					.end();
 				});
 				//-- Fill in those rows that are on additional pages
 				var pageAnchors = html.find('table.dataentrytable tr td input[name="MENU_NAME"]').nextAll('a');
@@ -464,14 +540,17 @@ function getMidtermGrades(container, next) {
 								var att = tr.find('td:eq(7) input').val();
 								container
 								.find('table.table tbody tr[data-id="' + id + '"]')
-								.find('td.td_mid')
-									.attr('data-grade',grade)
-									.find('select option[value="' + grade + '"]')
-										.prop('selected', true)
+								.data('pageIdx',pageIdx)
+									.find('td.td_mid')
+										.attr('data-grade',grade)
+										.find('select option[value="' + grade + '"]')
+											.prop('selected', true)
+										.end()
 									.end()
-								.end()
-								.find('td.td_att input[type="checkbox"]')
-									.prop('checked', (att > 0));
+									.find('td.td_att input[type="checkbox"]')
+										.prop('checked', (att > 0))
+									.end()
+								.end();
 							});
 							getNextPage(pageAnchors, i-1);
 						}		
@@ -653,6 +732,8 @@ $(document).ready(function(){
 	$('#termYear').change(termChangeHandler);
 	$('#prevTerm').click(termPrevNext);
 	$('#nextTerm').click(termPrevNext);
+	
+	$(window).data('gMap',{});
 });
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
