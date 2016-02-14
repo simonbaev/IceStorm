@@ -1,4 +1,8 @@
 /*jshint esnext: true */
+function ajaxErrorHandler(e) {
+	console.log(e);
+}
+
 function gradeChangeHandler(ev) {
 	var target = $(ev.target);
 	var td = target.parents('td');
@@ -133,35 +137,139 @@ function addClassesByCRN(container, CRNs, i) {
 					)	
 					.append($('<tbody>'))
 				)
+				//-- Modififcation: submit/clear
 				.append(
-					$('<a>')
-					.addClass('btn btn-primary pull-right')
-					.attr({
-						'role':'button',
-						'href': '#'
-					})
-					.click(function(){
-						var map = $(window).data('gMap');
-						var crn = $(this).parents('.collapse').data('crn');
-						if(!(crn in map)) {
-							return false;
-						}
-						//-- iterate through map to update records
-						for(var type in map[crn]) {
-							switch (type) {
-								case 'mid':
-									console.log(map[crn].mid);
-									break;
-								case 'fin':
-									break;
-							}
-						}
-						//-- remove submitted changesfrom the map
-						delete map[crn];
-						$(window).data('gMap',map);
-						$(this).siblings('table').find('td.bg-info').removeClass('bg-info');
-					})
-					.text("Submit")
+					$('<div>')
+					.addClass('btn-group pull-right')
+					.append(
+						$('<button>')
+						.attr({
+							'type':'button',
+							'data-toggle':'dropdown',
+							'aria-haspopup':'true',
+							'aria-expanded':'false'
+						})
+						.addClass('btn btn-primary dropdown-toggle')
+						.html('Modifications <span class="caret"></span>')
+					)
+					.append(
+						$('<ul>')
+						.addClass('dropdown-menu')
+						.append(
+							$('<li>')
+							.append(
+								$('<a>')
+								.attr('href','#')
+								.text('Submit')
+								.click(function(){
+									var map = $(window).data('gMap');
+									var crn = $(this).parents('.collapse').data('crn');
+									var pageProcessor = function(data, URL, pages, i) {
+										if(i < 1) {
+											return;
+										}
+										var pageArray = Object.keys(pages);
+										var pageIndex = pageArray.length - i;
+										var pageKey = pageArray[pageIndex];
+										var html = $($.parseHTML(data));
+										var formData = html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageKey + '&');
+										var processL2Response = function(URL, pages, page, i) {
+											return function(L2data) {
+												var formData = $($.parseHTML(L2data)).find('form[name=grades]').serialize();
+												var postL2 = function(URL, pages, i) {
+													return function(data) {
+														console.log($($.parseHTML(data)).find('form[name=grades]').serialize());
+														pageProcessor(data, URL, pages, i-1);	
+													};
+												};
+												//-- TODO: Update 'formData' with respect to 'page'
+												$.ajax({
+													type: 'POST',
+													async: true,
+													url: URL,
+													data: formData,
+													error: ajaxErrorHandler,
+													success: postL2(URL, pages, i)
+												});												
+											};
+										};
+										$.ajax({
+											type: 'POST',
+											async: true,
+											url: URL,
+											data: formData,
+											error: ajaxErrorHandler,
+											success: processL2Response(URL, pages, pages[pageKey], i)
+										});
+									};
+									var processL1Response = function(URL, pages) {
+										return function(L1data) {
+											pageProcessor(L1data, URL, pages, Object.keys(pages).length);
+										};
+									};
+									var setCRN = function(changes)  {
+										return function(data) {
+											var URLs = {
+												mid: {
+													L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
+													L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost'
+												},
+												fin: {
+													L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd',
+													L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacCommitFinGrd'
+												}
+											};
+											if('mid' in changes) {													
+												$.ajax({
+													type: 'GET',
+													async: true,
+													url: URLs.mid.L1,
+													error: ajaxErrorHandler,
+													success: processL1Response(URLs.mid.L2, changes.mid) 
+												});												
+											}
+										};
+									};
+										
+									if(!(crn in map)) {
+										return false;
+									}
+									if(!Object.keys(map[crn]).length) {
+										return false;	
+									}
+									$.ajax({
+										type: 'POST',
+										async: true,
+										url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkocrn.P_FacStoreCRN',
+										contentType: 'application/x-www-form-urlencoded',
+										data: 'name1=bmenu.P_FacMainMnu&calling_proc_name=P_FACCRNSEL&crn=' + crn,							
+										error: ajaxErrorHandler,
+										success: setCRN(map[crn])
+									});
+									$(this).parents('ul').find('li:eq(1) a').trigger('click');
+								})
+							)
+						)
+						.append(
+							$('<li>')
+							.append(
+								$('<a>')
+								.attr('href','#')
+								.text('Clear')
+								.click(function(){
+									var map = $(window).data('gMap');
+									var crn = $(this).parents('.collapse').data('crn');
+									if(!(crn in map)) {
+										return false;
+									}
+									//-- remove submitted changesfrom the map
+									delete map[crn];
+									$(window).data('gMap',map);
+									$(this).parents('.collapse').find('table td.bg-info').removeClass('bg-info');									
+								})
+							)
+						)
+					)
 				)
 				//-- E-Mail to class
 				.append(
@@ -284,7 +392,7 @@ function addClassesByCRN(container, CRNs, i) {
 						$('div.printContainer > div').toggleClass('printExclusion');
 					})
 					.text('Print')
-				)
+				)				
 			)
 			.data('crn',crnValue)
 			.data('title',courseTitle)
