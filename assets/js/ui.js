@@ -11,6 +11,7 @@ function gradeChangeHandler(ev) {
 	var value = isAtt ? ev.target.checked : target.find('option:selected').text();
 	var crn = target.parents('div.collapse').data('crn');
 	var id = target.parents('tr').find('td.td_id').text();
+	var No = target.parents('tr').find('td.td_N').text();
 	var page = target.parents('tr').data('pageIdx');
 	var map = $(window).data('gMap');
 	if(!(crn in map)) {
@@ -23,13 +24,13 @@ function gradeChangeHandler(ev) {
 		map[crn][type][page] = {};
 	}
 	if(type === 'mid') {
-		if(!(id in map[crn][type][page])) {
-			map[crn][type][page][id] = {};
+		if(!(No in map[crn][type][page])) {
+			map[crn][type][page][No] = {};
 		}
-		map[crn][type][page][id][isAtt ? 'att' : 'grade'] = value;
+		map[crn][type][page][No][isAtt ? 'att' : 'grade'] = value;
 	}
 	else {
-		map[crn][type][page][id] = value;
+		map[crn][type][page][No] = value;
 	}
 	td.addClass('bg-info');
 	$(window).data('gMap',map);
@@ -123,7 +124,7 @@ function addClassesByCRN(container, CRNs, i) {
 									.change(function(){
 										var state = this.checked;
 										$(this).parents('table.table').find('tbody tr td.td_att input').each(function(){
-											this.checked = state;
+											$(this).prop('checked',state).trigger('change');
 										});
 									})									
 									.end()
@@ -173,16 +174,56 @@ function addClassesByCRN(container, CRNs, i) {
 										var pageKey = pageArray[pageIndex];
 										var html = $($.parseHTML(data));
 										var formData = html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageKey + '&');
-										var processL2Response = function(URL, pages, page, i) {
+										var processL2Response = function(URL, pages, pageKey, i) {
 											return function(L2data) {
 												var formData = $($.parseHTML(L2data)).find('form[name=grades]').serialize();
 												var postL2 = function(URL, pages, i) {
 													return function(data) {
-														console.log($($.parseHTML(data)).find('form[name=grades]').serialize());
+														console.log('OK');
+														//console.log($($.parseHTML(data)).find('form[name=grades]').serialize());
 														pageProcessor(data, URL, pages, i-1);	
 													};
 												};
-												//-- TODO: Update 'formData' with respect to 'page'
+												//-- Extract components of 'formData' and update them with respect to 'page'
+												console.log(pages[pageKey]);
+												//-- Attendence
+												var hrs_tab = formData.match(/hrs_tab=\d+/g).map(function(old, index){
+													if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].att == "boolean")) {
+														return 'hrs_tab=' + (this[index+parseInt(pageKey)].att ? 1 : 0);
+													}
+													return old;
+												}, pages[pageKey]);
+												//-- Midterm grade
+												var mgrde_tab_parts = formData.match(/mgrde_tab=[A-Z]/g);
+												var mgrde_tab = 
+													(mgrde_tab_parts) ?
+													mgrde_tab_parts.map(function(old, index){
+														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
+															return 'mgrde_tab=' + this[index+parseInt(pageKey)].grade;
+														}
+														return old;
+													}, pages[pageKey]) :
+													null;
+												console.log(formData);	
+												console.log(mgrde_tab);
+												//-- Replace original formData with updated												
+												//-- Attendence
+												formData = formData.split(/hrs_tab=\d+/).map(
+													function(old, index){
+														return (index < this.length) ? (old + this[index]) : 	old;
+													},
+													hrs_tab
+												).join('');
+												//-- Midterm grade
+												if(mgrde_tab) {
+													formData = formData.split(/mgrde_tab=[A-Z]/).map(
+														function(old, index){
+															return (index < this.length) ? (old + this[index]) : 	old;
+														},
+														mgrde_tab
+													).join('');
+												}
+												//-- POST updated data
 												$.ajax({
 													type: 'POST',
 													async: true,
@@ -193,14 +234,19 @@ function addClassesByCRN(container, CRNs, i) {
 												});												
 											};
 										};
-										$.ajax({
-											type: 'POST',
-											async: true,
-											url: URL,
-											data: formData,
-											error: ajaxErrorHandler,
-											success: processL2Response(URL, pages, pages[pageKey], i)
-										});
+										if(pageArray.length === 1 && pageKey === '1') {
+											(processL2Response(URL, pages, pageKey, i))(data);
+										}
+										else {
+											$.ajax({
+												type: 'POST',
+												async: true,
+												url: URL,
+												data: formData,
+												error: ajaxErrorHandler,
+												success: processL2Response(URL, pages, pageKey, i)
+											});
+										}
 									};
 									var processL1Response = function(URL, pages) {
 										return function(L1data) {
@@ -219,15 +265,24 @@ function addClassesByCRN(container, CRNs, i) {
 													L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacCommitFinGrd'
 												}
 											};
-											if('mid' in changes) {													
-												$.ajax({
-													type: 'GET',
-													async: true,
-													url: URLs.mid.L1,
-													error: ajaxErrorHandler,
-													success: processL1Response(URLs.mid.L2, changes.mid) 
-												});												
-											}
+											var types = Object.keys(URLs);
+											var updateGrades = function(i) {
+												if(i < 1) {
+													return false;
+												}
+												var index = types.length - i;
+												var type = types[index];
+												if(type in changes) {
+													$.ajax({
+														type: 'GET',
+														async: true,
+														url: URLs[type].L1,
+														error: ajaxErrorHandler,
+														success: processL1Response(URLs[type].L2, changes[type]) 
+													});													
+												}
+											};
+											updateGrades(types.length);
 										};
 									};
 										
@@ -420,17 +475,13 @@ function getClassList(container, next){
 		url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkocrn.P_FacStoreCRN',
 		contentType: 'application/x-www-form-urlencoded',
 		data: 'name1=bmenu.P_FacMainMnu&calling_proc_name=P_FACCRNSEL&crn=' + crnValue,							
-		error: function(e) {
-			console.log(e);
-		},
+		error: ajaxErrorHandler,
 		success: function() {
 			$.ajax({
 				type: 'GET',
 				async: true,
 				url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfcwl.P_FacClaListSum',
-				error: function(e) {
-					console.log(e);
-				},
+				error: ajaxErrorHandler,
 				success: function(data) {
 					var html = $($.parseHTML(data));
 					var rows = html.find('table.datadisplaytable:eq(2) tr:gt(0)');
@@ -566,9 +617,7 @@ function getMidtermGrades(container, next) {
 		type: 'GET',
 		async: true,
 		url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
-		error: function(e) {
-			console.log(e);
-		},
+		error: ajaxErrorHandler,
 		success: function(P_FacMidGrd) {
 			var html = $($.parseHTML(P_FacMidGrd));
 			if(html.find('span.errortext').length) {
@@ -637,9 +686,7 @@ function getMidtermGrades(container, next) {
 						url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost',
 						contentType: 'application/x-www-form-urlencoded',
 						data: html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageIdx + '&'),
-						error: function(e) {
-							console.log(e);
-						},
+						error: ajaxErrorHandler,
 						success: function(pageData) {
 							$($.parseHTML(pageData)).find('table.dataentrytable tr:gt(0):not(:last-child)').each(function(index) {
 								var tr = $(this);
@@ -675,9 +722,7 @@ function getFinalGrades(container, next) {
 		type: 'GET',
 		async: true,
 		url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd',
-		error: function(e) {
-			console.log(e);
-		},
+		error: ajaxErrorHandler,
 		success: function(P_FacFinGrd) {
 			var html = $($.parseHTML(P_FacFinGrd));
 			if(html.find('span.errortext').length) {
@@ -729,9 +774,7 @@ function getFinalGrades(container, next) {
 						url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacCommitFinGrd',
 						contentType: 'application/x-www-form-urlencoded',
 						data: html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageIdx + '&'),
-						error: function(e) {
-							console.log(e);
-						},
+						error: ajaxErrorHandler,
 						success: function(pageData) {
 							$($.parseHTML(pageData)).find('table.dataentrytable tr:gt(0)').each(function(index) {
 								var tr = $(this);
@@ -770,15 +813,11 @@ function updateTerm(termString) {
 		url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkostm.P_FacStoreTerm',
 		contentType: 'application/x-www-form-urlencoded',
 		data: 'name1=bmenu.P_FacMainMnu&term=' + termString,
-		error: function(e) {
-			console.log(e);
-		},
+		error: ajaxErrorHandler,
 		success: function() {
 			$.get({
 				url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkocrn.P_FacCrnSel',
-				error: function(e) {
-					console.log(e);
-				},
+				error: ajaxErrorHandler,
 				success: function(data) {
 					var html = $($.parseHTML(data));
 					var CRNs = html.find('select[name=crn] option');
