@@ -23,17 +23,70 @@ function gradeChangeHandler(ev) {
 	if(!(page in map[crn][type])) {
 		map[crn][type][page] = {};
 	}
+	if(!(No in map[crn][type][page])) {
+		map[crn][type][page][No] = {};
+	}
 	if(type === 'mid') {
-		if(!(No in map[crn][type][page])) {
-			map[crn][type][page][No] = {};
-		}
-		map[crn][type][page][No][isAtt ? 'att' : 'grade'] = value;
+		map[crn][type][page][No][isAtt ? 'att' : 'grade'] = value;		
 	}
 	else {
-		map[crn][type][page][No] = value;
+		map[crn][type][page][No].grade = value;
+		if(value === 'F') {
+			var cbOK = function() {
+				return function() {
+					map[crn][type][page][No].last = $('input.datepicker').val();
+				};
+			};
+			var cbCancel = function() {
+				return function() {
+					var pGrade = target.parents('td').removeClass('bg-info').attr('data-grade');
+					target.find('option[value=' + pGrade + ']').prop('selected',true);
+				};
+			};
+			bootbox.dialog({
+				message: function(){
+					var container = 
+					$('<div>')
+					.append(
+						$('<input>')
+						.addClass('datepicker form-control')
+						.attr({
+							'placeholder' : 'Specify last date of attendance',
+							'data-provide': 'datepicker',
+							'data-date-autoclose': 'true',
+							'data-date-format': 'mm/dd/yyyy',
+							'data-date-todayHighlight': 'true',
+							'data-date-weekStart': 1
+						})
+						.on('changeDate',function(){
+							$(this).parents('.modal-content').find('button[data-bb-handler=OK]').removeAttr('disabled');
+						})
+					);
+					return container.get(0);
+				},
+				title: "Request for additional data",				
+				closeButton: true,
+				onEscape: true,
+				size: 'small',
+				animate: false,
+				buttons: {
+					Cancel: {
+						label: 'Cancel',
+						callback: cbCancel()
+					},
+					OK: {
+						diabled: true,
+						label: 'OK',
+						callback: cbOK()
+					}
+				}
+			});
+			$('.modal-content').find('button[data-bb-handler=OK]').attr('disabled','');
+		}
 	}
 	td.addClass('bg-info');
 	$(window).data('gMap',map);
+	target.parents('div.collapse').find('div.btn-group button').removeAttr('disabled');
 }
 
 function termChangeHandler(ev) {
@@ -148,7 +201,9 @@ function addClassesByCRN(container, CRNs, i) {
 							'type':'button',
 							'data-toggle':'dropdown',
 							'aria-haspopup':'true',
-							'aria-expanded':'false'
+							'aria-expanded':'false',
+							'disabled':''
+							
 						})
 						.addClass('btn btn-primary dropdown-toggle')
 						.html('Modifications <span class="caret"></span>')
@@ -165,8 +220,21 @@ function addClassesByCRN(container, CRNs, i) {
 								.click(function(){
 									var map = $(window).data('gMap');
 									var crn = $(this).parents('.collapse').data('crn');
-									var pageProcessor = function(data, URL, pages, i) {
+									var changes = map[crn];
+									var container = $(this).parents('.collapse');
+									var URLs = {
+										mid: {
+											L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
+											L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost'
+										},
+										fin: {
+											L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd',
+											L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacCommitFinGrd'
+										}
+									};
+									var pageProcessor = function(level, data, URL, pages, type, i) {										
 										if(i < 1) {
+											updateGrades(level-1);
 											return;
 										}
 										var pageArray = Object.keys(pages);
@@ -180,47 +248,64 @@ function addClassesByCRN(container, CRNs, i) {
 												var postL2 = function(URL, pages, i) {
 													return function(data) {
 														console.log('OK');
-														//console.log($($.parseHTML(data)).find('form[name=grades]').serialize());
-														pageProcessor(data, URL, pages, i-1);	
+														pageProcessor(level, data, URL, pages, type, i-1);	
 													};
 												};
 												//-- Extract components of 'formData' and update them with respect to 'page'
-												console.log(pages[pageKey]);
-												//-- Attendence
-												var hrs_tab = formData.match(/hrs_tab=\d+/g).map(function(old, index){
-													if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].att == "boolean")) {
-														return 'hrs_tab=' + (this[index+parseInt(pageKey)].att ? 1 : 0);
-													}
-													return old;
-												}, pages[pageKey]);
-												//-- Midterm grade
-												var mgrde_tab_parts = formData.match(/mgrde_tab=[A-Z]/g);
-												var mgrde_tab = 
-													(mgrde_tab_parts) ?
-													mgrde_tab_parts.map(function(old, index){
+												if(type === 'mid') {
+													//-- Attendence
+													var hrs_tab = formData.match(/hrs_tab=\d+/g).map(function(old, index){
+														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].att == "boolean")) {
+															return 'hrs_tab=' + (this[index+parseInt(pageKey)].att ? 1 : 0);
+														}
+														return old;
+													}, pages[pageKey]);
+													formData = formData.split(/hrs_tab=\d+/).map(
+														function(old, index){
+															return (index < this.length) ? (old + this[index]) : 	old;
+														},
+														hrs_tab
+													).join('');
+													//-- Midterm grade
+													var mgrde_tab = formData.match(/mgrde_tab=[A-Z]/g).map(function(old, index){
 														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
 															return 'mgrde_tab=' + this[index+parseInt(pageKey)].grade;
 														}
 														return old;
-													}, pages[pageKey]) :
-													null;
-												console.log(formData);	
-												console.log(mgrde_tab);
-												//-- Replace original formData with updated												
-												//-- Attendence
-												formData = formData.split(/hrs_tab=\d+/).map(
-													function(old, index){
-														return (index < this.length) ? (old + this[index]) : 	old;
-													},
-													hrs_tab
-												).join('');
-												//-- Midterm grade
-												if(mgrde_tab) {
+													}, pages[pageKey]);
 													formData = formData.split(/mgrde_tab=[A-Z]/).map(
 														function(old, index){
 															return (index < this.length) ? (old + this[index]) : 	old;
 														},
 														mgrde_tab
+													).join('');
+												}
+												else if(type === 'fin') {
+													//-- Final grade
+													var grde_tab = formData.match(/grde_tab=[A-Z]/g).map(function(old, index){
+														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
+															return 'grde_tab=' + this[index+parseInt(pageKey)].grade;
+														}
+														return old;
+													}, pages[pageKey]);
+													formData = formData.split(/grde_tab=[A-Z]/).map(
+														function(old, index){
+															return (index < this.length) ? (old + this[index]) : 	old;
+														},
+														grde_tab
+													).join('');	
+													//-- Last day in case of final grade of 'F'
+													var attend_tab = formData.match(/attend_tab=\d\d%2F\d\d%2F\d\d\d\d/g).map(function(old, index){
+														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].last == "string")) {
+															return 'attend_tab=' + encodeURIComponent(this[index+parseInt(pageKey)].last);
+														}
+														return old;
+													}, pages[pageKey]);
+													formData = formData.split(/attend_tab=\d\d%2F\d\d%2F\d\d\d\d/g).map(
+														function(old, index){
+															return (index < this.length) ? (old + this[index]) : 	old;
+														},
+														attend_tab
 													).join('');
 												}
 												//-- POST updated data
@@ -247,42 +332,37 @@ function addClassesByCRN(container, CRNs, i) {
 												success: processL2Response(URL, pages, pageKey, i)
 											});
 										}
+									};								
+									var updateGrades = function(i) {
+										if(i < 1) {
+											container.find('div.btn-group ul li:eq(1) a').trigger('click');
+											return false;
+										}
+										var types = Object.keys(URLs);
+										var index = types.length - i;
+										var type = types[index];
+										if(type in changes) {
+											$.ajax({
+												type: 'GET',
+												async: true,
+												url: URLs[type].L1,
+												error: ajaxErrorHandler,
+												success: processL1Response(i, URLs[type].L2, changes[type], type) 
+											});													
+										}
+										else {
+											updateGrades(i-1);
+										}
 									};
-									var processL1Response = function(URL, pages) {
+									var processL1Response = function(level, URL, pages, type) {
 										return function(L1data) {
-											pageProcessor(L1data, URL, pages, Object.keys(pages).length);
+											pageProcessor(level, L1data, URL, pages, type, Object.keys(pages).length);
 										};
 									};
-									var setCRN = function(changes)  {
-										return function(data) {
-											var URLs = {
-												mid: {
-													L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
-													L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost'
-												},
-												fin: {
-													L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd',
-													L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacCommitFinGrd'
-												}
-											};
-											var types = Object.keys(URLs);
-											var updateGrades = function(i) {
-												if(i < 1) {
-													return false;
-												}
-												var index = types.length - i;
-												var type = types[index];
-												if(type in changes) {
-													$.ajax({
-														type: 'GET',
-														async: true,
-														url: URLs[type].L1,
-														error: ajaxErrorHandler,
-														success: processL1Response(URLs[type].L2, changes[type]) 
-													});													
-												}
-											};
-											updateGrades(types.length);
+									var setCRN = function()  {
+										return function() {
+											console.log(map[crn]);
+											updateGrades(Object.keys(URLs).length);
 										};
 									};
 										
@@ -299,9 +379,8 @@ function addClassesByCRN(container, CRNs, i) {
 										contentType: 'application/x-www-form-urlencoded',
 										data: 'name1=bmenu.P_FacMainMnu&calling_proc_name=P_FACCRNSEL&crn=' + crn,							
 										error: ajaxErrorHandler,
-										success: setCRN(map[crn])
-									});
-									$(this).parents('ul').find('li:eq(1) a').trigger('click');
+										success: setCRN()
+									});									
 								})
 							)
 						)
@@ -313,14 +392,20 @@ function addClassesByCRN(container, CRNs, i) {
 								.text('Clear')
 								.click(function(){
 									var map = $(window).data('gMap');
-									var crn = $(this).parents('.collapse').data('crn');
+									var container = $(this).parents('.collapse');
+									var crn = container.data('crn');
 									if(!(crn in map)) {
 										return false;
 									}
 									//-- remove submitted changesfrom the map
 									delete map[crn];
 									$(window).data('gMap',map);
-									$(this).parents('.collapse').find('table td.bg-info').removeClass('bg-info');									
+									//-- re-disable "Modifications" button
+									$(this).parents('div.btn-group').find('button').attr('disabled','');
+									//-- restore data from original RAIN tables
+									$(this).parents('div.btn-group').find('button').attr('disabled','');
+									$(this).parents('.collapse').find('table.table tbody td.bg-info').removeClass('bg-info');
+									getMidtermGrades(container,getFinalGrades);
 								})
 							)
 						)
