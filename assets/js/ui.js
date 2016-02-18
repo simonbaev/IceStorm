@@ -217,172 +217,7 @@ function addClassesByCRN(container, CRNs, i) {
 								$('<a>')
 								.attr('href','#')
 								.text('Submit')
-								.click(function(){
-									var map = $(window).data('gMap');
-									var crn = $(this).parents('.collapse').data('crn');
-									var changes = map[crn];
-									var container = $(this).parents('.collapse');
-									var URLs = {
-										mid: {
-											L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
-											L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost'
-										},
-										fin: {
-											L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd',
-											L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacCommitFinGrd'
-										}
-									};
-									var pageProcessor = function(level, data, URL, pages, type, i) {										
-										if(i < 1) {
-											updateGrades(level-1);
-											return;
-										}
-										var pageArray = Object.keys(pages);
-										var pageIndex = pageArray.length - i;
-										var pageKey = pageArray[pageIndex];
-										var html = $($.parseHTML(data));
-										var formData = html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageKey + '&');
-										var processL2Response = function(URL, pages, pageKey, i) {
-											return function(L2data) {
-												var formData = $($.parseHTML(L2data)).find('form[name=grades]').serialize();
-												var postL2 = function(URL, pages, i) {
-													return function(data) {
-														console.log('OK');
-														pageProcessor(level, data, URL, pages, type, i-1);	
-													};
-												};
-												//-- Extract components of 'formData' and update them with respect to 'page'
-												if(type === 'mid') {
-													//-- Attendence
-													var hrs_tab = formData.match(/hrs_tab=\d+/g).map(function(old, index){
-														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].att == "boolean")) {
-															return 'hrs_tab=' + (this[index+parseInt(pageKey)].att ? 1 : 0);
-														}
-														return old;
-													}, pages[pageKey]);
-													formData = formData.split(/hrs_tab=(?:\d+)*/).map(
-														function(old, index){
-															return (index < this.length) ? (old + this[index]) : 	old;
-														},
-														hrs_tab
-													).join('');
-													//-- Midterm grade
-													var mgrde_tab = formData.match(/mgrde_tab=[A-Z]/g).map(function(old, index){
-														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
-															return 'mgrde_tab=' + this[index+parseInt(pageKey)].grade;
-														}
-														return old;
-													}, pages[pageKey]);
-													formData = formData.split(/mgrde_tab=(?:[A-Z]+)*/).map(
-														function(old, index){
-															return (index < this.length) ? (old + this[index]) : 	old;
-														},
-														mgrde_tab
-													).join('');
-												}
-												else if(type === 'fin') {
-													//-- Final grade
-													var grde_tab = formData.match(/grde_tab=[A-Z]/g).map(function(old, index){
-														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
-															return 'grde_tab=' + this[index+parseInt(pageKey)].grade;
-														}
-														return old;
-													}, pages[pageKey]);
-													formData = formData.split(/grde_tab=(?:[A-Z]+)*/).map(
-														function(old, index){
-															return (index < this.length) ? (old + this[index]) : 	old;
-														},
-														grde_tab
-													).join('');	
-													//-- Last day in case of final grade of 'F'
-													var attend_tab = formData.match(/attend_tab=(\d\d%2F\d\d%2F\d\d\d\d)*/g).map(function(old, index){
-														if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].last == "string")) {
-															return 'attend_tab=' + encodeURIComponent(this[index+parseInt(pageKey)].last);
-														}
-														return old;
-													}, pages[pageKey]);
-													
-													formData = formData.split(/attend_tab=(?:\d\d%2F\d\d%2F\d\d\d\d)*/).map(
-														function(old, index){
-															return (index < this.length) ? (old + this[index]) : 	old;
-														},
-														attend_tab
-													).join('');
-												}
-												//-- POST updated data
-												$.ajax({
-													type: 'POST',
-													async: true,
-													url: URL,
-													data: formData,
-													error: ajaxErrorHandler,
-													success: postL2(URL, pages, i)
-												});												
-											};
-										};
-										if(pageArray.length === 1 && pageKey === '1') {
-											(processL2Response(URL, pages, pageKey, i))(data);
-										}
-										else {
-											$.ajax({
-												type: 'POST',
-												async: true,
-												url: URL,
-												data: formData,
-												error: ajaxErrorHandler,
-												success: processL2Response(URL, pages, pageKey, i)
-											});
-										}
-									};								
-									var updateGrades = function(i) {
-										if(i < 1) {
-											container.find('div.btn-group ul li:eq(1) a').trigger('click');
-											return false;
-										}
-										var types = Object.keys(URLs);
-										var index = types.length - i;
-										var type = types[index];
-										if(type in changes) {
-											$.ajax({
-												type: 'GET',
-												async: true,
-												url: URLs[type].L1,
-												error: ajaxErrorHandler,
-												success: processL1Response(i, URLs[type].L2, changes[type], type) 
-											});													
-										}
-										else {
-											updateGrades(i-1);
-										}
-									};
-									var processL1Response = function(level, URL, pages, type) {
-										return function(L1data) {
-											pageProcessor(level, L1data, URL, pages, type, Object.keys(pages).length);
-										};
-									};
-									var setCRN = function()  {
-										return function() {
-											console.log(map[crn]);
-											updateGrades(Object.keys(URLs).length);
-										};
-									};
-										
-									if(!(crn in map)) {
-										return false;
-									}
-									if(!Object.keys(map[crn]).length) {
-										return false;	
-									}
-									$.ajax({
-										type: 'POST',
-										async: true,
-										url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkocrn.P_FacStoreCRN',
-										contentType: 'application/x-www-form-urlencoded',
-										data: 'name1=bmenu.P_FacMainMnu&calling_proc_name=P_FACCRNSEL&crn=' + crn,							
-										error: ajaxErrorHandler,
-										success: setCRN()
-									});									
-								})
+								.click(setRAINdata)
 							)
 						)
 						.append(
@@ -406,7 +241,7 @@ function addClassesByCRN(container, CRNs, i) {
 									//-- restore data from original RAIN tables
 									$(this).parents('div.btn-group').find('button').attr('disabled','');
 									$(this).parents('.collapse').find('table.table tbody td.bg-info').removeClass('bg-info');
-									getGrades(container);
+									getRAINdata(container,true);
 								})
 							)
 						)
@@ -542,7 +377,7 @@ function addClassesByCRN(container, CRNs, i) {
 				var container = $(this);
 				var crnValue = container.data('crn');
 				if(!container.find('table.table tbody tr').length) {
-					getClassList(container);
+					getRAINdata(container);
 				}
 			})			
 		)		
@@ -551,154 +386,184 @@ function addClassesByCRN(container, CRNs, i) {
 	addClassesByCRN(container, CRNs, i-1);	
 }
 
-function getClassList(container){
-	var crnValue = container.data('crn');
-	var courseName = container.data('course');
-	container.parent().find('.panel-heading .panel-title a span:eq(1)').text('class roster...');
+function setRAINdata() {
+	//-- $(this) -- is a 'Submit' hyperlink
+	var map = $(window).data('gMap');
+	var crn = $(this).parents('.collapse').data('crn');
+	var changes = map[crn];
+	var container = $(this).parents('.collapse');
+	var URLs = {
+		mid: {
+			L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
+			L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost'
+		},
+		fin: {
+			L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacFinGrd',
+			L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkffgd.P_FacCommitFinGrd'
+		}
+	};
+	var pageProcessor = function(level, data, URL, pages, type, i) {										
+		if(i < 1) {
+			updateGrades(level-1);
+			return;
+		}
+		var pageArray = Object.keys(pages);
+		var pageIndex = pageArray.length - i;
+		var pageKey = pageArray[pageIndex];
+		var html = $($.parseHTML(data));
+		var formData = html.find('form[name=grades]').serialize().replace(/target_rec=\d+&/,'target_rec=' + pageKey + '&');
+		var processL2Response = function(URL, pages, pageKey, i) {
+			return function(L2data) {
+				var formData = $($.parseHTML(L2data)).find('form[name=grades]').serialize();
+				var postL2 = function(URL, pages, i) {
+					return function(data) {
+						console.log('OK');
+						pageProcessor(level, data, URL, pages, type, i-1);	
+					};
+				};
+				//-- Extract components of 'formData' and update them with respect to 'page'
+				if(type === 'mid') {
+					//-- Attendence
+					var hrs_tab = formData.match(/hrs_tab=\d+/g).map(function(old, index){
+						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].att == "boolean")) {
+							return 'hrs_tab=' + (this[index+parseInt(pageKey)].att ? 1 : 0);
+						}
+						return old;
+					}, pages[pageKey]);
+					formData = formData.split(/hrs_tab=(?:\d+)*/).map(
+						function(old, index){
+							return (index < this.length) ? (old + this[index]) : 	old;
+						},
+						hrs_tab
+					).join('');
+					//-- Midterm grade
+					var mgrde_tab = formData.match(/mgrde_tab=[A-Z]/g).map(function(old, index){
+						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
+							return 'mgrde_tab=' + this[index+parseInt(pageKey)].grade;
+						}
+						return old;
+					}, pages[pageKey]);
+					formData = formData.split(/mgrde_tab=(?:[A-Z]+)*/).map(
+						function(old, index){
+							return (index < this.length) ? (old + this[index]) : 	old;
+						},
+						mgrde_tab
+					).join('');
+				}
+				else if(type === 'fin') {
+					//-- Final grade
+					var grde_tab = formData.match(/grde_tab=[A-Z]/g).map(function(old, index){
+						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
+							return 'grde_tab=' + this[index+parseInt(pageKey)].grade;
+						}
+						return old;
+					}, pages[pageKey]);
+					formData = formData.split(/grde_tab=(?:[A-Z]+)*/).map(
+						function(old, index){
+							return (index < this.length) ? (old + this[index]) : 	old;
+						},
+						grde_tab
+					).join('');	
+					//-- Last day in case of final grade of 'F'
+					var attend_tab = formData.match(/attend_tab=(\d\d%2F\d\d%2F\d\d\d\d)*/g).map(function(old, index){
+						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].last == "string")) {
+							return 'attend_tab=' + encodeURIComponent(this[index+parseInt(pageKey)].last);
+						}
+						return old;
+					}, pages[pageKey]);
+					
+					formData = formData.split(/attend_tab=(?:\d\d%2F\d\d%2F\d\d\d\d)*/).map(
+						function(old, index){
+							return (index < this.length) ? (old + this[index]) : 	old;
+						},
+						attend_tab
+					).join('');
+				}
+				//-- POST updated data
+				$.ajax({
+					type: 'POST',
+					async: true,
+					url: URL,
+					data: formData,
+					error: ajaxErrorHandler,
+					success: postL2(URL, pages, i)
+				});												
+			};
+		};
+		if(pageArray.length === 1 && pageKey === '1') {
+			(processL2Response(URL, pages, pageKey, i))(data);
+		}
+		else {
+			$.ajax({
+				type: 'POST',
+				async: true,
+				url: URL,
+				data: formData,
+				error: ajaxErrorHandler,
+				success: processL2Response(URL, pages, pageKey, i)
+			});
+		}
+	};								
+	var updateGrades = function(i) {
+		if(i < 1) {
+			container.find('div.btn-group ul li:eq(1) a').trigger('click');
+			return false;
+		}
+		var types = Object.keys(URLs);
+		var index = types.length - i;
+		var type = types[index];
+		if(type in changes) {
+			$.ajax({
+				type: 'GET',
+				async: true,
+				url: URLs[type].L1,
+				error: ajaxErrorHandler,
+				success: processL1Response(i, URLs[type].L2, changes[type], type) 
+			});													
+		}
+		else {
+			updateGrades(i-1);
+		}
+	};
+	var processL1Response = function(level, URL, pages, type) {
+		return function(L1data) {
+			pageProcessor(level, L1data, URL, pages, type, Object.keys(pages).length);
+		};
+	};
+	var setCRN = function()  {
+		return function() {
+			console.log(map[crn]);
+			updateGrades(Object.keys(URLs).length);
+		};
+	};
+		
+	if(!(crn in map)) {
+		return false;
+	}
+	if(!Object.keys(map[crn]).length) {
+		return false;	
+	}
 	$.ajax({
 		type: 'POST',
 		async: true,
 		url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkocrn.P_FacStoreCRN',
 		contentType: 'application/x-www-form-urlencoded',
-		data: 'name1=bmenu.P_FacMainMnu&calling_proc_name=P_FACCRNSEL&crn=' + crnValue,							
+		data: 'name1=bmenu.P_FacMainMnu&calling_proc_name=P_FACCRNSEL&crn=' + crn,							
 		error: ajaxErrorHandler,
-		success: function() {
-			$.ajax({
-				type: 'GET',
-				async: true,
-				url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfcwl.P_FacClaListSum',
-				error: ajaxErrorHandler,
-				success: function(data) {
-					var html = $($.parseHTML(data));
-					var rows = html.find('table.datadisplaytable:eq(2) tr:gt(0)');
-					if(!rows.length) {
-						container
-						.find('table.table tbody')
-						.append(
-							$('<tr>')
-							.append(
-								$('<td>')
-								.attr('colspan',7)
-								.addClass('noData')
-								.text('No records found')
-							)
-						);
-						container.parent().find('.panel-heading .panel-title a span:eq(1)').text('').addClass('glyphicon glyphicon-ok');	
-					}
-					else {
-						rows.each(function() {
-							var tr = $(this);
-							var email = tr.find('td span.fieldmediumtext a').last().attr('href').split(/[:]/)[1];
-							var name = tr.find('td:eq(1)').text();
-							var id = tr.find('td:eq(2)').text();
-							var lname = name.split(/,/)[0].trim();
-							var fname = name.split(/,/)[1].trim().split(/\s/,1)[0].trim();
-							var wd = /WD/.test(tr.find('td:eq(3)').text());
-							container.find('table.table tbody')
-							.append(
-								$('<tr>')
-								.addClass(wd ? 'bg-danger' : '')
-								.attr({
-									'title': wd ? tr.find('td:eq(3)').text().trim() : '',
-									'data-id': id
-								})
-								.append($('<td>').text(tr.find('td:eq(0)').text()).addClass('td_N'))
-								.append($('<td>').text(name).addClass('td_name'))
-								.append($('<td>').text(id).addClass('td_id'))
-								.append(
-									$('<td>')
-									.addClass('td_att')
-									.append(
-										$('<div>')
-										.append(
-											$('<input>')
-											.attr({
-												'type':'checkbox'
-											})
-											.click(function(){
-												this.checked = !this.checked;
-											})
-											.change(gradeChangeHandler)
-										)
-										.click(function(){
-											$(this).find('input[type="checkbox"]').each(function(){ 
-												if(!this.disabled) {
-													this.checked = !this.checked; 
-													$(this).trigger('change');
-												}
-											});
-										})
-									)							
-								)						
-								.append(
-									$('<td>')
-									.addClass('td_mid')
-									.append(
-										$('<select>')
-										.addClass('form-control')
-										.append($('<option>').val(null).text('None').attr('selected',''))									
-										.append($('<option>').val('A').text('A'))									
-										.append($('<option>').val('B').text('B'))									
-										.append($('<option>').val('C').text('C'))									
-										.append($('<option>').val('D').text('D'))									
-										.append($('<option>').val('F').text('F'))									
-										.append($('<option>').val('I').text('I'))									
-										.append($('<option>').val('P').text('P'))									
-										.append($('<option>').val('S').text('S'))									
-										.append($('<option>').val('U').text('U'))
-										.append($('<option>').val('W').text('W'))
-										.attr('data-gtype','mid')
-										.change(gradeChangeHandler)
-									)
-								)
-								.append(
-									$('<td>')
-									.addClass('td_fin')
-									.append(
-										$('<select>')
-										.addClass('form-control')
-										.append($('<option>').val(null).text('None').attr('selected',''))
-										.append($('<option>').val('A').text('A'))									
-										.append($('<option>').val('B').text('B'))									
-										.append($('<option>').val('C').text('C'))									
-										.append($('<option>').val('D').text('D'))									
-										.append($('<option>').val('F').text('F'))									
-										.append($('<option>').val('I').text('I'))									
-										.append($('<option>').val('P').text('P'))									
-										.append($('<option>').val('S').text('S'))									
-										.append($('<option>').val('U').text('U'))
-										.append($('<option>').val('W').text('W'))
-										.attr('data-gtype','fin')
-										.change(gradeChangeHandler)
-									)
-								)
-								.append(
-									$('<td>')
-									.addClass('td_email')
-									.append(
-										$('<a>')
-										.attr({
-											'href': 	'mailto:' + fname + '%20' + lname + '%20' + '%3c' + email + '%3e' + '?subject=' + courseName + ':%20',
-											'data-email': email,
-											'target': '_blank'
-										})
-										.text(email)
-									)
-								)
-							);
-						});						
-						getGrades(container);
-					}
-				}
-			});
-		}
-	});
+		success: setCRN()
+	});									
 }
 
-function getGrades(container) {
+function getRAINdata(container, gradesOnly) {
+	gradesOnly = gradesOnly || false;
 	var statusHolder = container.parent().find('.panel-heading .panel-title a span:eq(1)');	
 	var crn = container.data('crn');
+	var courseName = container.data('course');
 	var URLs = {
+		roster: {
+			L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfcwl.P_FacClaListSum',
+			L2: ''
+		},
 		mid: {
 			L1: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrd',
 			L2: 'https://gsw.gabest.usg.edu/pls/B420/bwlkfmgd.P_FacMidGrdPost'
@@ -786,7 +651,113 @@ function getGrades(container) {
 	var processL1Response = function(level, URL, type) {
 		return function(L1data) {
 			var html = $($.parseHTML(L1data));
-			if(html.find('span.errortext').length) {
+			if(type === 'roster') {
+				var rows = html.find('table.datadisplaytable:eq(2) tr:gt(0)');
+				if(!rows.length) {
+					container
+					.find('table.table tbody')
+					.append(
+						$('<tr>')
+						.append(
+							$('<td>')
+							.attr('colspan',7)
+							.addClass('noData')
+							.text('No records found')
+						)
+					);
+					container.parent().find('.panel-heading .panel-title a span:eq(1)').text('').addClass('glyphicon glyphicon-ok');	
+				}
+				else {
+					var grades='None A B C D F I P S U W'.split(/\s/);
+					var gradesOptions = $('<select>').addClass('form-control');
+					$.each(grades,function(index,value){
+						var option = $('<option>').val(value).text(value);
+						if(index === 0) {
+							option.attr('selected','');
+						}
+						gradesOptions.append(option);
+					});
+					rows.each(function() {
+						var tr = $(this);
+						var email = tr.find('td span.fieldmediumtext a').last().attr('href').split(/[:]/)[1];
+						var name = tr.find('td:eq(1)').text();
+						var id = tr.find('td:eq(2)').text();
+						var lname = name.split(/,/)[0].trim();
+						var fname = name.split(/,/)[1].trim().split(/\s/,1)[0].trim();
+						var wd = /WD/.test(tr.find('td:eq(3)').text());
+						container.find('table.table tbody')
+						.append(
+							$('<tr>')
+							.addClass(wd ? 'bg-danger' : '')
+							.attr({
+								'title': wd ? tr.find('td:eq(3)').text().trim() : '',
+								'data-id': id
+							})
+							.append($('<td>').text(tr.find('td:eq(0)').text()).addClass('td_N'))
+							.append($('<td>').text(name).addClass('td_name'))
+							.append($('<td>').text(id).addClass('td_id'))
+							.append(
+								$('<td>')
+								.addClass('td_att')
+								.append(
+									$('<div>')
+									.append(
+										$('<input>')
+										.attr({
+											'type':'checkbox'
+										})
+										.click(function(){
+											this.checked = !this.checked;
+										})
+										.change(gradeChangeHandler)
+									)
+									.click(function(){
+										$(this).find('input[type="checkbox"]').each(function(){ 
+											if(!this.disabled) {
+												this.checked = !this.checked; 
+												$(this).trigger('change');
+											}
+										});
+									})
+								)							
+							)						
+							.append(
+								$('<td>')
+								.addClass('td_mid')
+								.append(
+									gradesOptions.clone()
+									.attr('data-gtype','mid')
+									.change(gradeChangeHandler)
+								)								
+							)
+							.append(
+								$('<td>')
+								.addClass('td_fin')
+								.append(
+									gradesOptions.clone()
+									.attr('data-gtype','fin')
+									.change(gradeChangeHandler)
+								)
+							)
+							.append(
+								$('<td>')
+								.addClass('td_email')
+								.append(
+									$('<a>')
+									.attr({
+										'href': 	'mailto:' + fname + '%20' + lname + '%20' + '%3c' + email + '%3e' + '?subject=' + courseName + ':%20',
+										'data-email': email,
+										'target': '_blank'
+									})
+									.text(email)
+								)
+							)
+						);
+					});						
+				}
+				gradeProcessor(level-1);
+			}
+			else if(html.find('span.errortext').length) {				
 				if(type === 'mid') {
 					container
 					.find('table.table')
@@ -824,13 +795,21 @@ function getGrades(container) {
 						.end()
 					.end();	
 				}
-				processGrades(level-1);
+				gradeProcessor(level-1);
 			}
 			else {
-				var pageAnchors = 
-				(type === 'fin') ?
-				html.find('span.fieldlabeltext').nextAll('a'):
-				html.find('table.dataentrytable tr td input[name="MENU_NAME"]').nextAll('a');
+				var pageAnchors;
+				switch (type) {
+					case 'roster':
+						pageAnchors = $();
+						break;
+					case 'mid':
+						pageAnchors = html.find('table.dataentrytable tr td input[name="MENU_NAME"]').nextAll('a');
+						break;
+					case 'fin':
+						pageAnchors = html.find('span.fieldlabeltext').nextAll('a');	
+						break;
+				}
 				if(pageAnchors.length === 0) {
 					(processL2Response(level, URL, type, pageAnchors, 1))(L1data);
 				}
@@ -849,6 +828,9 @@ function getGrades(container) {
 		var index = types.length - level;
 		var type = types[index];
 		switch (type) {
+			case 'roster':
+				statusHolder.text('class roster');
+				break;
 			case 'mid':
 				statusHolder.text('midterm grades and attendance');
 				break;
@@ -866,7 +848,8 @@ function getGrades(container) {
 	};
 	var setCRN = function()  {
 		return function() {
-			gradeProcessor(Object.keys(URLs).length);
+			var depth = Object.keys(URLs).length;
+			gradeProcessor(gradesOnly ? depth - 1 : depth);
 		};
 	};
 	$.ajax({
