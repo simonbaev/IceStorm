@@ -695,7 +695,129 @@ function getRAINdata(container, gradesOnly) {
 							})
 							.append($('<td>').text(tr.find('td:eq(0)').text()).addClass('td_N'))
 							.append($('<td>').text(name).addClass('td_name'))
-							.append($('<td>').text(id).addClass('td_id'))
+							.append(
+								$('<td>')
+								.addClass('td_id')
+								.append(
+									$('<a>')
+									.attr({
+										'href':'#'
+									})
+									.text(id)
+									.click(function(){
+										var term = $('#termYear').val() + $('#termSelect').val();
+										var formData = 'CALLING_PROC_NAME=&CALLING_PROC_NAME2=&STUD_ID=' + id + '&TERM=' + term + '&first_name=&last_name=&search_type=All&term_in=';
+										$.ajax({
+											type: 'POST',
+											async: true,
+											url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkoids.P_FacVerifyID',
+											data: formData,
+											error: ajaxErrorHandler,
+											success: function(data){
+												var html = $($.parseHTML(data));
+												var formData = html.find('form').eq(1).serialize();
+												$.ajax({
+													type: 'POST',
+													async: true,
+													url: 'https://gsw.gabest.usg.edu/pls/B420/bwlkoids.P_FacStoreID',
+													data: formData,
+													error: ajaxErrorHandler,
+													success: function(data){
+														$.ajax({
+															type: 'GET',
+															async: true,
+															url: 'https://gsw.gabest.usg.edu/pls/B420/bwwktrns.P_DispAdvTrans',
+															error: ajaxErrorHandler,
+															success: function(data){	
+																var html = $($.parseHTML(data));
+																var info = html.find('table.datadisplaytable:eq(0) tr:eq(1) th:eq(0) p').html().split(/<br>/g);
+																var address = info.slice(1);
+																var name = info[0];
+																var phone = html.find('table.datadisplaytable:eq(0) tr:eq(2) td').text().trim();
+																var advisor = html.find('table.datadisplaytable:eq(1) tr:eq(1) td:eq(1)').text().trim();
+																var major = html.find('table.datadisplaytable:eq(1) tr:eq(3) td:eq(1)').text().trim();
+																var coursesInProgress = html.find('table.datadisplaytable:eq(8) tr').slice(3,-2);
+																var currentTerm = html.find('table.datadisplaytable:eq(8) tr:eq(2) th').text().trim().split(/\s+/g);
+																var isActive = (html.find('table.datadisplaytable:eq(8) tr:eq(0) th').text().trim() === 'Courses in Progress');
+																bootbox.dialog({
+																	message: function(){
+																		var container = 
+																		$('<div>')
+																		.append(
+																			$('<h4>')
+																			.html('<b>Contact and other information</b>:')
+																			.addClass('text-info')
+																		)
+																		.append(
+																			$('<table>')
+																			.addClass('table table-bordered table-condensed')
+																			.append(
+																				$('<tr>')
+																				.append($('<th>').text('Name:'))
+																				.append($('<td>').text(name))
+																			)
+																			.append(
+																				$('<tr>')
+																				.append($('<th>').text('Address:'))
+																				.append($('<td>').text(address.join(', ')))
+																			)
+																			.append(
+																				$('<tr>')
+																				.append($('<th>').text('Phone:'))
+																				.append($('<td>').text(phone))
+																			)
+																			.append(
+																				$('<tr>')
+																				.append($('<th>').text('Major:'))
+																				.append($('<td>').text(major))
+																			)
+																			.append(
+																				$('<tr>')
+																				.append($('<th>').text('Advisor:'))
+																				.append($('<td>').text(advisor))
+																			)
+																		);
+																		if(isActive) {
+																			container
+																			.append(
+																				$('<h4>')
+																				.html('<b>Courses in progress</b>&nbsp;<small>(' + currentTerm[0] + ' ' + currentTerm[2] + '):</small>')	
+																				.addClass('text-info')
+																			)
+																			.append(
+																				$('<table>')
+																				.attr('id','cip')
+																				.addClass('table table-bordered table-condensed')
+																			);
+																			coursesInProgress.each(function(index,value){
+																				$('<tr>')
+																				.append($('<th>').text($(this).find('td:eq(0)').text().trim()))
+																				.append($('<td>').text($(this).find('td:eq(1)').text().trim()))
+																				.appendTo(container.find('#cip'));
+																			});
+																		}
+																		return container.get(0);
+																	},
+																	//title: "Information about <b>" + name + "</b>",				
+																	closeButton: false,
+																	onEscape: true,
+																	animate: false,
+																	buttons: {
+																		Cancel: {
+																			label: 'Close'
+																		}
+																	}															
+																});
+															}
+														});
+													}
+												});
+											}
+										});
+										return false;
+									})
+								)
+							)
 							.append(
 								$('<td>')
 								.addClass('td_att')
@@ -829,13 +951,13 @@ function getRAINdata(container, gradesOnly) {
 		var type = types[index];
 		switch (type) {
 			case 'roster':
-				statusHolder.text('class roster');
+				statusHolder.removeClass('glyphicon glyphicon-ok').text('class roster');
 				break;
 			case 'mid':
-				statusHolder.text('midterm grades and attendance');
+				statusHolder.removeClass('glyphicon glyphicon-ok').text('midterm grades and attendance');
 				break;
 			case 'fin':
-				statusHolder.text('final grades');
+				statusHolder.removeClass('glyphicon glyphicon-ok').text('final grades');
 				break;
 		}
 		$.ajax({
