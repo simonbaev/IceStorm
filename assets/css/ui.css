@@ -11,6 +11,9 @@ div.page-header div.pull-right.form-inline {
   margin-left:10px;
 
 }
+.blur {
+	-webkit-filter: blur(5px) grayscale(75%);
+}
 table.table th,
 table.table td {
 	vertical-align: middle  !important;

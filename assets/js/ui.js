@@ -104,6 +104,13 @@ function termChangeHandler(ev) {
 function addClassesByCRN(container, CRNs, i) {
 	//-- Termination condition
 	if(i <= 0) {
+		chrome.storage.local.get('optBlur',function(items){
+			if(items.optBlur)
+				$('.blurable').addClass('blur');
+			else
+				$('.blurable').removeClass('blur');
+			$('#facName span').fadeIn();
+		});
 		return;
 	}
 	var index = CRNs.length - i;
@@ -189,7 +196,7 @@ function addClassesByCRN(container, CRNs, i) {
 							
 						)
 					)	
-					.append($('<tbody>'))
+					.append($('<tbody>').hide())
 				)
 				//-- Modififcation: submit/clear
 				.append(
@@ -694,10 +701,10 @@ function getRAINdata(container, gradesOnly) {
 								'data-id': id
 							})
 							.append($('<td>').text(tr.find('td:eq(0)').text()).addClass('td_N'))
-							.append($('<td>').text(name).addClass('td_name'))
+							.append($('<td>').text(name).addClass('td_name blurable'))
 							.append(
 								$('<td>')
-								.addClass('td_id')
+								.addClass('td_id blurable')
 								.append(
 									$('<a>')
 									.attr({
@@ -754,27 +761,27 @@ function getRAINdata(container, gradesOnly) {
 																			.append(
 																				$('<tr>')
 																				.append($('<th>').text('Name:'))
-																				.append($('<td>').text(name))
+																				.append($('<td>').text(name).addClass('blurable'))
 																			)
 																			.append(
 																				$('<tr>')
 																				.append($('<th>').text('Address:'))
-																				.append($('<td>').text(address.join(', ')))
+																				.append($('<td>').text(address.join(', ')).addClass('blurable'))
 																			)
 																			.append(
 																				$('<tr>')
 																				.append($('<th>').text('Phone:'))
-																				.append($('<td>').text(phone))
+																				.append($('<td>').text(phone).addClass('blurable'))
 																			)
 																			.append(
 																				$('<tr>')
 																				.append($('<th>').text('Major:'))
-																				.append($('<td>').text(major))
+																				.append($('<td>').text(major).addClass('blurable'))
 																			)
 																			.append(
 																				$('<tr>')
 																				.append($('<th>').text('Advisor:'))
-																				.append($('<td>').text(advisor))
+																				.append($('<td>').text(advisor).addClass('blurable'))
 																			)
 																		);
 																		if(isActive) {
@@ -796,18 +803,25 @@ function getRAINdata(container, gradesOnly) {
 																				.appendTo(container.find('#cip'));
 																			});
 																		}
+																		chrome.storage.local.get('optBlur',function(items){
+																			if(items.optBlur)
+																				container.find('.blurable').addClass('blur');
+																			else
+																				container.find('.blurable').removeClass('blur');
+																		});
 																		return container.get(0);
 																	},
 																	//title: "Information about <b>" + name + "</b>",				
 																	closeButton: false,
 																	onEscape: true,
 																	animate: false,
+																	show: false,
 																	buttons: {
 																		Cancel: {
 																			label: 'Close'
 																		}
 																	}															
-																});
+																}).modal('show');
 															}
 														});
 													}
@@ -820,7 +834,7 @@ function getRAINdata(container, gradesOnly) {
 							)
 							.append(
 								$('<td>')
-								.addClass('td_att')
+								.addClass('td_att blurable')
 								.append(
 									$('<div>')
 									.append(
@@ -845,7 +859,7 @@ function getRAINdata(container, gradesOnly) {
 							)						
 							.append(
 								$('<td>')
-								.addClass('td_mid')
+								.addClass('td_mid blurable')
 								.append(
 									gradesOptions.clone()
 									.attr('data-gtype','mid')
@@ -854,7 +868,7 @@ function getRAINdata(container, gradesOnly) {
 							)
 							.append(
 								$('<td>')
-								.addClass('td_fin')
+								.addClass('td_fin blurable')
 								.append(
 									gradesOptions.clone()
 									.attr('data-gtype','fin')
@@ -863,7 +877,7 @@ function getRAINdata(container, gradesOnly) {
 							)
 							.append(
 								$('<td>')
-								.addClass('td_email')
+								.addClass('td_email blurable')
 								.append(
 									$('<a>')
 									.attr({
@@ -944,6 +958,13 @@ function getRAINdata(container, gradesOnly) {
 	var gradeProcessor = function(level) {
 		if(level < 1) {
 			statusHolder.text('').addClass('glyphicon glyphicon-ok');
+			container.find('table.table tbody').fadeIn();
+			chrome.storage.local.get('optBlur',function(items){
+				if(items.optBlur)
+					$('.blurable').addClass('blur');
+				else
+					$('.blurable').removeClass('blur');
+			});
 			return;
 		}
 		var types = Object.keys(URLs);
@@ -1043,7 +1064,7 @@ $(document).ready(function(){
 		var headers = page.find('div.staticheaders').html().split(/<br>/g);
 		var facID = headers[0].trim().split(/\s+/g,1)[0];
 		var facName = headers[0].trim().split(/\s+/g).slice(1).join(' ');
-		$('#facName').text('Welcome, ' + facName);
+		$('#facName span').hide().text(facName).addClass('blurable');
 	});	
 	//-- Set term from local storage
 	chrome.storage.local.get(['termSelect','termYear','termString'],function(items){

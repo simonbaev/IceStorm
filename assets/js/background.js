@@ -63,7 +63,7 @@ function extensionInstalled(details) {
 				termSelect: termSelect,
 				termYear: termYear,
 				termString: termString,
-				optPrintWork: false,
+				optBlur: false,
 				optKeepAlive: true
 			});	
 		});
