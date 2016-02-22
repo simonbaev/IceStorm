@@ -743,7 +743,13 @@ function getRAINdata(container, gradesOnly) {
 																var phone = html.find('table.datadisplaytable:eq(0) tr:eq(2) td').text().trim();
 																var advisor = html.find('table.datadisplaytable:eq(1) tr:eq(1) td:eq(1)').text().trim();
 																var major = html.find('table.datadisplaytable:eq(1) tr:eq(3) td:eq(1)').text().trim();
-																var coursesInProgress = html.find('table.datadisplaytable:eq(8) tr').slice(3,-2);
+																var coursesInProgress = html.find('table.datadisplaytable tr:contains("Courses in Progress")').parent('tbody').find('tr');
+																if(coursesInProgress.slice(3,-2).length) {
+																	coursesInProgress = coursesInProgress.slice(3,-2);
+																}
+																else {
+																	coursesInProgress = coursesInProgress.slice(3);
+																}
 																var currentTerm = html.find('table.datadisplaytable:eq(8) tr:eq(2) th').text().trim().split(/\s+/g);
 																var isActive = (html.find('table.datadisplaytable:eq(8) tr:eq(0) th').text().trim() === 'Courses in Progress');
 																bootbox.dialog({
