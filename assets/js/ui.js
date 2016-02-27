@@ -444,7 +444,8 @@ function setRAINdata() {
 						hrs_tab
 					).join('');
 					//-- Midterm grade
-					var mgrde_tab = formData.match(/mgrde_tab=[A-Z]/g).map(function(old, index){
+					
+					var mgrde_tab = formData.match(/mgrde_tab=[A-Z]*/g).map(function(old, index){
 						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
 							return 'mgrde_tab=' + this[index+parseInt(pageKey)].grade;
 						}
@@ -459,7 +460,7 @@ function setRAINdata() {
 				}
 				else if(type === 'fin') {
 					//-- Final grade
-					var grde_tab = formData.match(/grde_tab=[A-Z]/g).map(function(old, index){
+					var grde_tab = formData.match(/grde_tab=[A-Z]*/g).map(function(old, index){
 						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
 							return 'grde_tab=' + this[index+parseInt(pageKey)].grade;
 						}
@@ -744,6 +745,7 @@ function getRAINdata(container, gradesOnly) {
 																var advisor = html.find('table.datadisplaytable:eq(1) tr:eq(1) td:eq(1)').text().trim();
 																var major = html.find('table.datadisplaytable:eq(1) tr:eq(3) td:eq(1)').text().trim();
 																var coursesInProgress = html.find('table.datadisplaytable tr:contains("Courses in Progress")').parent('tbody').find('tr');
+																var gpa = html.find('table.datadisplaytable').last().find('tr th:contains("Total Institution")').parent().find('td').last().text().trim();
 																if(coursesInProgress.slice(3,-2).length) {
 																	coursesInProgress = coursesInProgress.slice(3,-2);
 																}
@@ -788,6 +790,11 @@ function getRAINdata(container, gradesOnly) {
 																				$('<tr>')
 																				.append($('<th>').text('Advisor:'))
 																				.append($('<td>').text(advisor).addClass('blurable'))
+																			)
+																			.append(
+																				$('<tr>')
+																				.append($('<th>').text('Most recent GPA:'))
+																				.append($('<td>').text(gpa).addClass('blurable'))
 																			)
 																		);
 																		if(isActive) {
@@ -1111,4 +1118,3 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 		return true;
 	}
 });
-
