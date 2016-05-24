@@ -31,59 +31,60 @@ function gradeChangeHandler(ev) {
 	}
 	else {
 		map[crn][type][page][No].grade = value;
-		if(value === 'F') {
-			var cbOK = function() {
-				return function() {
-					map[crn][type][page][No].last = $('input.datepicker').val();
-				};
-			};
-			var cbCancel = function() {
-				return function() {
-					var pGrade = target.parents('td').removeClass('bg-info').attr('data-grade');
-					target.find('option[value=' + pGrade + ']').prop('selected',true);
-				};
-			};
-			bootbox.dialog({
-				message: function(){
-					var container = 
-					$('<div>')
-					.append(
-						$('<input>')
-						.addClass('datepicker form-control')
-						.attr({
-							'placeholder' : 'Specify last date of attendance',
-							'data-provide': 'datepicker',
-							'data-date-autoclose': 'true',
-							'data-date-format': 'mm/dd/yyyy',
-							'data-date-todayHighlight': 'true',
-							'data-date-weekStart': 1
-						})
-						.on('changeDate',function(){
-							$(this).parents('.modal-content').find('button[data-bb-handler=OK]').removeAttr('disabled');
-						})
-					);
-					return container.get(0);
-				},
-				title: "Request for additional data",				
-				closeButton: true,
-				onEscape: true,
-				size: 'small',
-				animate: false,
-				buttons: {
-					Cancel: {
-						label: 'Cancel',
-						callback: cbCancel()
-					},
-					OK: {
-						diabled: true,
-						label: 'OK',
-						callback: cbOK()
-					}
-				}
-			});
-			$('.modal-content').find('button[data-bb-handler=OK]').attr('disabled','');
-		}
 	}
+	if(value === 'F') {
+		var cbOK = function() {
+			return function() {
+				map[crn][type][page][No].last = $('input.datepicker').val();
+			};
+		};
+		var cbCancel = function() {
+			return function() {
+				var pGrade = target.parents('td').removeClass('bg-info').attr('data-grade');
+				target.find('option[value=' + pGrade + ']').prop('selected',true);
+			};
+		};
+		bootbox.dialog({
+			message: function(){
+				var container = 
+				$('<div>')
+				.append(
+					$('<input>')
+					.addClass('datepicker form-control')
+					.attr({
+						'placeholder' : 'Specify last date of attendance',
+						'data-provide': 'datepicker',
+						'data-date-autoclose': 'true',
+						'data-date-format': 'mm/dd/yyyy',
+						'data-date-todayHighlight': 'true',
+						'data-date-weekStart': 1
+					})
+					.on('changeDate',function(){
+						$(this).parents('.modal-content').find('button[data-bb-handler=OK]').removeAttr('disabled');
+					})
+				);
+				return container.get(0);
+			},
+			title: "Request for additional data",				
+			closeButton: true,
+			onEscape: true,
+			size: 'small',
+			animate: false,
+			buttons: {
+				Cancel: {
+					label: 'Cancel',
+					callback: cbCancel()
+				},
+				OK: {
+					diabled: true,
+					label: 'OK',
+					callback: cbOK()
+				}
+			}
+		});
+		$('.modal-content').find('button[data-bb-handler=OK]').attr('disabled','');
+	}
+	//}
 	td.addClass('bg-info');
 	$(window).data('gMap',map);
 	target.parents('div.collapse').find('div.btn-group button').removeAttr('disabled');
@@ -431,7 +432,8 @@ function setRAINdata() {
 				//-- Extract components of 'formData' and update them with respect to 'page'
 				if(type === 'mid') {
 					//-- Attendence
-					var hrs_tab = formData.match(/hrs_tab=\d+/g).map(function(old, index){
+					//var hrs_tab = formData.match(/hrs_tab=\d+/g).map(function(old, index){
+					var hrs_tab = formData.match(/hrs_tab=\d*/g).map(function(old, index){
 						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].att == "boolean")) {
 							return 'hrs_tab=' + (this[index+parseInt(pageKey)].att ? 1 : 0);
 						}
@@ -444,10 +446,10 @@ function setRAINdata() {
 						hrs_tab
 					).join('');
 					//-- Midterm grade
-					
 					var mgrde_tab = formData.match(/mgrde_tab=[A-Z]*/g).map(function(old, index){
 						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
-							return 'mgrde_tab=' + this[index+parseInt(pageKey)].grade;
+							var grade = this[index+parseInt(pageKey)].grade;
+							return 'mgrde_tab=' + ((grade === 'None') ? '' : grade);
 						}
 						return old;
 					}, pages[pageKey]);
@@ -457,12 +459,26 @@ function setRAINdata() {
 						},
 						mgrde_tab
 					).join('');
+					//-- Last day in case of final grade of 'F'
+					var mid_attend_tab = formData.match(/attend_tab=(\d\d%2F\d\d%2F\d\d\d\d)*/g).map(function(old, index){
+						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].last == "string")) {
+							return 'attend_tab=' + encodeURIComponent(this[index+parseInt(pageKey)].last);
+						}
+						return old;
+					}, pages[pageKey]);
+					formData = formData.split(/attend_tab=(?:\d\d%2F\d\d%2F\d\d\d\d)*/).map(
+						function(old, index){
+							return (index < this.length) ? (old + this[index]) : 	old;
+						},
+						mid_attend_tab
+					).join('');
 				}
 				else if(type === 'fin') {
 					//-- Final grade
 					var grde_tab = formData.match(/grde_tab=[A-Z]*/g).map(function(old, index){
 						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].grade == "string")) {
-							return 'grde_tab=' + this[index+parseInt(pageKey)].grade;
+							var grade = this[index+parseInt(pageKey)].grade;
+							return 'grde_tab=' + ((grade === 'None') ? '' : grade);
 						}
 						return old;
 					}, pages[pageKey]);
@@ -473,18 +489,17 @@ function setRAINdata() {
 						grde_tab
 					).join('');	
 					//-- Last day in case of final grade of 'F'
-					var attend_tab = formData.match(/attend_tab=(\d\d%2F\d\d%2F\d\d\d\d)*/g).map(function(old, index){
+					var fin_attend_tab = formData.match(/attend_tab=(\d\d%2F\d\d%2F\d\d\d\d)*/g).map(function(old, index){
 						if(this[index+parseInt(pageKey)] && (typeof this[index+parseInt(pageKey)].last == "string")) {
 							return 'attend_tab=' + encodeURIComponent(this[index+parseInt(pageKey)].last);
 						}
 						return old;
 					}, pages[pageKey]);
-					
 					formData = formData.split(/attend_tab=(?:\d\d%2F\d\d%2F\d\d\d\d)*/).map(
 						function(old, index){
 							return (index < this.length) ? (old + this[index]) : 	old;
 						},
-						attend_tab
+						fin_attend_tab
 					).join('');
 				}
 				//-- POST updated data
@@ -618,15 +633,15 @@ function getRAINdata(container, gradesOnly) {
 							tooOld ?
 							tr.find('td:eq(5)').text().trim() :
 							tr.find('td:eq(5) select option:selected').text().trim();
-						container
+						var select = container
 						.find('table.table tbody tr[data-id="' + id + '"] td.td_fin')
 							.attr('data-grade',grade)
 							.find('select option[value="' + grade + '"]')
 								.prop('selected', true)
-								.parent()
-								.attr(tooOld ? 'disabled' : '','')
-							.end()
-						.end();
+								.parent();
+						if(tooOld) {
+							select.attr('disabled','');
+						}
 						break;
 				}				
 			});	
