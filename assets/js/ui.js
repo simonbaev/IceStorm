@@ -12,7 +12,11 @@ function gradeChangeHandler(ev) {
 	var crn = target.parents('div.collapse').data('crn');
 	var id = target.parents('tr').find('td.td_id').text();
 	var No = target.parents('tr').find('td.td_N').text();
-	var page = target.parents('tr').data('pageIdx');
+	var page = 
+		(type === 'mid') ? 
+		target.parents('tr').find('td.td_mid').data('pageIdx') :
+		target.parents('tr').find('td.td_fin').data('pageIdx');
+		
 	var map = $(window).data('gMap');
 	if(!(crn in map)) {
 		map[crn] = {};
@@ -615,8 +619,11 @@ function getRAINdata(container, gradesOnly) {
 						grade = tr.find('td:eq(5) select option:selected').text().trim();
 						container
 						.find('table.table tbody tr[data-id="' + id + '"]')
+							/*
 							.data('pageIdx', page)
+							*/
 							.find('td.td_mid')
+								.data('pageIdx', page)
 								.attr('data-grade',grade)
 								.find('select option[value="' + grade + '"]')
 									.prop('selected', true)
@@ -633,12 +640,19 @@ function getRAINdata(container, gradesOnly) {
 							tooOld ?
 							tr.find('td:eq(5)').text().trim() :
 							tr.find('td:eq(5) select option:selected').text().trim();
-						var select = container
-						.find('table.table tbody tr[data-id="' + id + '"] td.td_fin')
-							.attr('data-grade',grade)
-							.find('select option[value="' + grade + '"]')
-								.prop('selected', true)
-								.parent();
+						var row = container.find('table.table tbody tr[data-id="' + id + '"]');
+						/*
+						if(typeof row.data('pageIdx') === 'undefined') {
+							row.data('pageIdx', page);
+						}
+						*/
+						var select = row
+							.find('td.td_fin')	
+								.data('pageIdx', page)
+								.attr('data-grade',grade)
+								.find('select option[value="' + grade + '"]')
+									.prop('selected', true)
+									.parent();
 						if(tooOld) {
 							select.attr('disabled','');
 						}

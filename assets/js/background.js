@@ -85,6 +85,7 @@ function alarmBeeps(alarm) {
 								text: 'Same RAIN account was used to start another session, please re-login'
 							}, function(keepUI){
 								chrome.storage.local.get('parentSessionTab',function(items){
+									console.log("Parent session detected at " + items.parentSessionTab.id);
 									chrome.tabs.update(items.parentSessionTab.id,{
 										url: 'https://gsw.gabest.usg.edu/pls/B420/twbkwbis.P_WWWLogin',
 										active: !keepUI
